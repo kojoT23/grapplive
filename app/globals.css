@@ -1,0 +1,91 @@
+@import "tailwindcss";
+
+@theme {
+  --color-gl-brand: #D6127A;
+  --color-gl-brand-soft-bg: #FBEAF0;
+  --color-gl-brand-soft-text: #993556;
+  --color-gl-green: #0B6E4F;
+  --color-gl-green-soft-bg: #EAF3DE;
+  --color-gl-green-soft-text: #3B6D11;
+  --color-gl-amber: #BA7517;
+  --color-gl-amber-soft-bg: #FEF6E8;
+  --color-gl-amber-soft-text: #7A4E0F;
+  --color-gl-red: #C8102E;
+  --color-gl-navy: #2C2C6E;
+  --color-gl-gold-crown: #BA7517;
+  --color-gl-bg-muted: #F2F2F2;
+  --color-gl-bg-placeholder: #D3D1C7;
+  --color-gl-text: #0B0B0B;
+  --color-gl-text-secondary: #5F5E5A;
+  --color-gl-text-muted: #B4B2A9;
+  --color-gl-border: #E1E0D9;
+  --color-gl-border-strong: #B4B2A9;
+  --color-gl-page-bg: #F4F3F0;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  background: var(--color-gl-page-bg);
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
+}
+
+/* Prevent iOS Safari auto-zoom when focusing text inputs */
+input, select, textarea {
+  font-size: 16px;
+}
+
+/* Buttons shouldn't show a text-selection highlight on tap */
+button {
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.gl-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-gl-bg-placeholder) 25%,
+    var(--color-gl-bg-muted) 50%,
+    var(--color-gl-bg-placeholder) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes livepulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.gl-live-pulse {
+  animation: livepulse 1.8s ease-in-out infinite;
+}
+
+@keyframes statusflash {
+  0% {
+    background-color: var(--color-gl-brand-soft-bg);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.gl-status-flash {
+  animation: statusflash 1s ease-out;
+}
