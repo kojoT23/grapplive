@@ -4,11 +4,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { IconArrowLeft, IconCircleCheck, IconCircle } from "@tabler/icons-react";
 import { useOrdersStore } from "@/lib/store/useOrdersStore";
-import type { OrderStatus } from "@/lib/mock-data/orders";
-
-function formatGHS(amount: number) {
-  return `GHS ${amount.toLocaleString("en-GH")}`;
-}
+import { flattenGroups, groupTotal, type OrderStatus } from "@/lib/mock-data/orders";
 
 const ALL_STEPS: { status: OrderStatus; fallbackLabel: string }[] = [
   { status: "awaiting_confirmation", fallbackLabel: "Order placed" },
@@ -20,9 +16,9 @@ const ALL_STEPS: { status: OrderStatus; fallbackLabel: string }[] = [
 export default function BuyerOrderDetailPage() {
   const params = useParams<{ id: string }>();
   const orders = useOrdersStore((s) => s.orders);
-  const order = orders.find((o) => o.id === params.id);
+  const group = flattenGroups(orders).find((g) => g.id === params.id);
 
-  if (!order) {
+  if (!group) {
     return (
       <div className="px-3 md:px-5 pt-3.5">
         <Link href="/account/orders" className="flex items-center gap-1 text-[11px] text-gl-text-secondary mb-4 active:opacity-60 transition-opacity">
@@ -33,15 +29,13 @@ export default function BuyerOrderDetailPage() {
     );
   }
 
-  // Build a display timeline: use real history for completed steps,
-  // show remaining steps in ALL_STEPS as pending (no timestamp yet).
   const relevantSteps =
-    order.status === "awaiting_confirmation" || order.status === "ready_to_pack"
-      ? ALL_STEPS.filter((s) => s.status !== "awaiting_confirmation" || order.paymentMethod === "direct_momo")
+    group.status === "awaiting_confirmation" || group.status === "ready_to_pack"
+      ? ALL_STEPS.filter((s) => s.status !== "awaiting_confirmation" || group.paymentMethod === "direct_momo")
       : ALL_STEPS;
 
   const timeline = relevantSteps.map((step) => {
-    const historyEntry = order.history.find((h) => h.status === step.status);
+    const historyEntry = group.history.find((h) => h.status === step.status);
     return {
       status: step.status,
       label: historyEntry?.label ?? step.fallbackLabel,
@@ -60,14 +54,21 @@ export default function BuyerOrderDetailPage() {
       </div>
 
       <div className="px-3 md:px-5">
-        <div className="flex items-center gap-2.5 pb-3 border-b border-gl-bg-muted mb-3">
-          <div className="w-14 h-14 rounded-lg shrink-0 overflow-hidden gl-shimmer" />
-          <div className="flex-1">
-            <div className="text-[12px] text-gl-text">{order.itemName} × {order.quantity}</div>
-            <div className="text-[10px] text-gl-text-secondary">{order.sellerName}</div>
-            <div className="text-[12px] font-semibold text-gl-text mt-0.5">
-              {formatGHS(order.priceGHS * order.quantity)}
+        <div className="pb-3 border-b border-gl-bg-muted mb-3">
+          <div className="text-[10px] text-gl-text-secondary mb-2">{group.sellerName}</div>
+          {group.items.map((item) => (
+            <div key={item.productId} className="flex items-center gap-2.5 mb-2">
+              <div className="w-14 h-14 rounded-lg shrink-0 overflow-hidden gl-shimmer" />
+              <div className="flex-1">
+                <div className="text-[12px] text-gl-text">{item.itemName} × {item.quantity}</div>
+                <div className="text-[12px] font-semibold text-gl-text mt-0.5">
+                  GHS {(item.priceGHS * item.quantity).toLocaleString("en-GH")}
+                </div>
+              </div>
             </div>
+          ))}
+          <div className="text-[11px] font-semibold text-gl-text text-right">
+            Total: GHS {groupTotal(group).toLocaleString("en-GH")}
           </div>
         </div>
 

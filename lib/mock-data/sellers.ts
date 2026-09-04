@@ -1,4 +1,5 @@
 import { catalogProducts, type CatalogProduct } from "./catalog";
+import { getStoreBySellerId, type Store } from "./stores";
 
 export type Seller = {
   id: string;
@@ -6,6 +7,7 @@ export type Seller = {
   ordersCompleted: number;
   replyTime: string;
   products: CatalogProduct[];
+  store?: Store;
 };
 
 export function getSellerById(id: string): Seller | undefined {
@@ -19,5 +21,6 @@ export function getSellerById(id: string): Seller | undefined {
     ordersCompleted: first.sellerOrdersCompleted,
     replyTime: first.sellerReplyTime,
     products: sellerProducts,
+    store: getStoreBySellerId(id),
   };
 }

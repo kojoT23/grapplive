@@ -73,12 +73,12 @@ export default function HomePage() {
       </div>
 
       <Link
-        href="/grappstore"
+        href="/verified"
         className="mx-3 md:mx-5 mb-2.5 bg-[#0B0B0B] rounded-lg px-3 py-2.5 flex items-center justify-between relative overflow-hidden transition-transform active:scale-[0.98]"
       >
         <div className="absolute -top-4 -right-4 w-16 h-16 rounded-full bg-gl-brand/25" />
         <div className="relative">
-          <div className="text-[12px] font-medium text-white">GrappStore</div>
+          <div className="text-[12px] font-medium text-white">GRAPP Verified</div>
           <div className="text-[9px] text-white/70">Verified producers · trusted imports · top sellers</div>
         </div>
         <IconChevronRight size={16} className="relative text-white/80" />

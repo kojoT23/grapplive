@@ -1,21 +1,26 @@
 import { create } from "zustand";
-import { initialOrders, type Order, type OrderStatus, type PaymentMethod } from "@/lib/mock-data/orders";
+import {
+  initialOrders,
+  type Order,
+  type OrderGroup,
+  type OrderItem,
+  type OrderStatus,
+  type PaymentMethod,
+} from "@/lib/mock-data/orders";
 
-type NewOrderInput = {
-  productId: string;
-  itemName: string;
-  quantity: number;
-  priceGHS: number;
+export type NewOrderGroupInput = {
+  sellerId: string;
   sellerName: string;
+  items: OrderItem[];
   paymentMethod: PaymentMethod;
 };
 
 type OrdersState = {
   orders: Order[];
-  placeOrder: (input: NewOrderInput) => void;
-  confirmPayment: (orderId: string) => void;
-  requestDelivery: (orderId: string) => void;
-  markDelivered: (orderId: string) => void;
+  placeOrder: (groups: NewOrderGroupInput[]) => void;
+  confirmPayment: (groupId: string) => void;
+  requestDelivery: (groupId: string) => void;
+  markDelivered: (groupId: string) => void;
 };
 
 let orderCounter = 100;
@@ -24,73 +29,75 @@ function nowLabel() {
   return "Just now";
 }
 
+function updateGroup(
+  orders: Order[],
+  groupId: string,
+  updater: (g: OrderGroup) => OrderGroup
+): Order[] {
+  return orders.map((order) => ({
+    ...order,
+    groups: order.groups.map((g) => (g.id === groupId ? updater(g) : g)),
+  }));
+}
+
 export const useOrdersStore = create<OrdersState>((set) => ({
   orders: initialOrders,
 
-  placeOrder: (input) =>
+  placeOrder: (groupInputs) =>
     set((state) => {
       orderCounter += 1;
-      const initialStatus: OrderStatus =
-        input.paymentMethod === "instant_confirm" ? "ready_to_pack" : "awaiting_confirmation";
-      const initialLabel =
-        input.paymentMethod === "instant_confirm"
-          ? "Order confirmed and paid"
-          : "Order placed — awaiting seller confirmation";
+      const orderId = "o" + orderCounter;
 
-      const newOrder: Order = {
-        id: "o" + orderCounter,
-        productId: input.productId,
-        itemName: input.itemName,
-        quantity: input.quantity,
-        priceGHS: input.priceGHS,
-        sellerName: input.sellerName,
-        paymentMethod: input.paymentMethod,
-        status: initialStatus,
-        buyerNote: input.paymentMethod === "direct_momo" ? "Payment sent — awaiting confirmation" : undefined,
-        history: [{ status: initialStatus, label: initialLabel, timestamp: nowLabel() }],
-      };
+      const groups: OrderGroup[] = groupInputs.map((input, idx) => {
+        const initialStatus: OrderStatus =
+          input.paymentMethod === "instant_confirm" ? "ready_to_pack" : "awaiting_confirmation";
+        const initialLabel =
+          input.paymentMethod === "instant_confirm"
+            ? "Order confirmed and paid"
+            : "Order placed — awaiting seller confirmation";
 
+        return {
+          id: `${orderId}-g${idx + 1}`,
+          sellerId: input.sellerId,
+          sellerName: input.sellerName,
+          items: input.items,
+          paymentMethod: input.paymentMethod,
+          status: initialStatus,
+          buyerNote: input.paymentMethod === "direct_momo" ? "Payment sent — awaiting confirmation" : undefined,
+          history: [{ status: initialStatus, label: initialLabel, timestamp: nowLabel() }],
+        };
+      });
+
+      const newOrder: Order = { id: orderId, groups };
       return { orders: [newOrder, ...state.orders] };
     }),
 
-  confirmPayment: (orderId) =>
+  confirmPayment: (groupId) =>
     set((state) => ({
-      orders: state.orders.map((o) =>
-        o.id === orderId
-          ? {
-              ...o,
-              status: "preparing" as const,
-              history: [...o.history, { status: "preparing" as const, label: "Seller confirmed payment — preparing your order", timestamp: nowLabel() }],
-            }
-          : o
-      ),
+      orders: updateGroup(state.orders, groupId, (g) => ({
+        ...g,
+        status: "preparing",
+        history: [...g.history, { status: "preparing", label: "Seller confirmed payment — preparing your order", timestamp: nowLabel() }],
+      })),
     })),
 
-  requestDelivery: (orderId) =>
+  requestDelivery: (groupId) =>
     set((state) => ({
-      orders: state.orders.map((o) =>
-        o.id === orderId
-          ? {
-              ...o,
-              status: "out_for_delivery" as const,
-              riderName: "Rider assigned",
-              etaMinutes: 30,
-              history: [...o.history, { status: "out_for_delivery" as const, label: "Out for delivery", timestamp: nowLabel() }],
-            }
-          : o
-      ),
+      orders: updateGroup(state.orders, groupId, (g) => ({
+        ...g,
+        status: "out_for_delivery",
+        riderName: "Rider assigned",
+        etaMinutes: 30,
+        history: [...g.history, { status: "out_for_delivery", label: "Out for delivery", timestamp: nowLabel() }],
+      })),
     })),
 
-  markDelivered: (orderId) =>
+  markDelivered: (groupId) =>
     set((state) => ({
-      orders: state.orders.map((o) =>
-        o.id === orderId
-          ? {
-              ...o,
-              status: "delivered" as const,
-              history: [...o.history, { status: "delivered" as const, label: "Delivered", timestamp: nowLabel() }],
-            }
-          : o
-      ),
+      orders: updateGroup(state.orders, groupId, (g) => ({
+        ...g,
+        status: "delivered",
+        history: [...g.history, { status: "delivered", label: "Delivered", timestamp: nowLabel() }],
+      })),
     })),
 }));

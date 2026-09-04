@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { IconArrowLeft } from "@tabler/icons-react";
 import { useCartStore } from "@/lib/store/useCartStore";
-import { useOrdersStore } from "@/lib/store/useOrdersStore";
+import { useOrdersStore, type NewOrderGroupInput } from "@/lib/store/useOrdersStore";
 import { getProductById } from "@/lib/mock-data/catalog";
 
 type PaymentMethod = "instant_confirm" | "direct_momo";
@@ -49,18 +49,35 @@ export default function CheckoutPage() {
   const handlePlaceOrder = () => {
     setIsPlacingOrder(true);
     setTimeout(() => {
+      // Group cart items by seller — each seller becomes one OrderGroup
+      // within a single buyer-facing Order (unified cart, split settlement).
+      const groupsBySeller = new Map<string, NewOrderGroupInput>();
+
       items.forEach((item) => {
         const product = getProductById(item.productId);
         if (!product) return;
-        placeOrder({
+
+        const orderItem = {
           productId: product.id,
           itemName: product.name,
           quantity: item.quantity,
           priceGHS: product.priceGHS,
-          sellerName: product.sellerName,
-          paymentMethod: method,
-        });
+        };
+
+        const existing = groupsBySeller.get(product.sellerId);
+        if (existing) {
+          existing.items.push(orderItem);
+        } else {
+          groupsBySeller.set(product.sellerId, {
+            sellerId: product.sellerId,
+            sellerName: product.sellerName,
+            items: [orderItem],
+            paymentMethod: method,
+          });
+        }
       });
+
+      placeOrder(Array.from(groupsBySeller.values()));
       clearCart();
       router.push("/checkout/confirmation");
     }, 500);

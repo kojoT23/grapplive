@@ -9,7 +9,8 @@ export type SellerSocials = {
   instagramHandle?: string;
 };
 
-export type PremiumBadge = "verified_producer" | "trusted_import" | "top_seller";
+export type VerifiedTier = "verified_producer" | "trusted_import" | "top_seller";
+export type ProductSourceType = "marketplace" | "grapplive";
 
 export type CatalogProduct = {
   id: string;
@@ -24,7 +25,14 @@ export type CatalogProduct = {
   origin: ProductOrigin;
   category: ProductCategory;
   sellerSocials: SellerSocials;
-  premiumBadge: PremiumBadge | null;
+  verifiedTier: VerifiedTier | null;
+  sourceType: ProductSourceType;
+  rating?: number;
+  reviewCount?: number;
+  imageCount?: number;
+  deliveryEstimate?: string;
+  returnPolicyDays?: number;
+  warranty?: string;
 };
 
 export const catalogProducts: CatalogProduct[] = [
@@ -47,7 +55,13 @@ export const catalogProducts: CatalogProduct[] = [
       tiktokHandle: "amasfashionhouse",
       instagramHandle: "amasfashionhouse",
     },
-    premiumBadge: "top_seller",
+    verifiedTier: "top_seller",
+    sourceType: "marketplace",
+    rating: 4.8,
+    reviewCount: 312,
+    imageCount: 4,
+    deliveryEstimate: "3–6 days",
+    returnPolicyDays: 7,
   },
   {
     id: "p2",
@@ -68,7 +82,14 @@ export const catalogProducts: CatalogProduct[] = [
       tiktokHandle: "kojoelectronics",
       instagramHandle: "kojoelectronics",
     },
-    premiumBadge: null,
+    verifiedTier: null,
+    sourceType: "marketplace",
+    rating: 4.5,
+    reviewCount: 98,
+    imageCount: 4,
+    deliveryEstimate: "2–5 days",
+    returnPolicyDays: 7,
+    warranty: "6 months",
   },
   {
     id: "p3",
@@ -83,22 +104,13 @@ export const catalogProducts: CatalogProduct[] = [
     sellerSocials: {
       whatsappNumber: "233271234567",
     },
-    premiumBadge: "verified_producer",
-  },
-  {
-    id: "p4",
-    name: "Wireless charger",
-    priceGHS: 120,
-    sellerId: "s4",
-    sellerName: "GRAPPlive Imports",
-    sellerOrdersCompleted: 40,
-    sellerReplyTime: "~5 min",
-    origin: "grapp_import",
-    category: "home",
-    sellerSocials: {
-      whatsappNumber: "233551234567",
-    },
-    premiumBadge: "trusted_import",
+    verifiedTier: "verified_producer",
+    sourceType: "marketplace",
+    rating: 4.9,
+    reviewCount: 96,
+    imageCount: 4,
+    deliveryEstimate: "3–6 days",
+    returnPolicyDays: 7,
   },
 ];
 
@@ -106,8 +118,8 @@ export function getProductById(id: string): CatalogProduct | undefined {
   return catalogProducts.find((p) => p.id === id);
 }
 
-export function getGrappStoreProducts(): CatalogProduct[] {
-  return catalogProducts.filter((p) => p.premiumBadge !== null);
+export function getGrappVerifiedProducts(): CatalogProduct[] {
+  return catalogProducts.filter((p) => p.verifiedTier !== null);
 }
 
 export function getProductsByCategory(category: string): CatalogProduct[] {

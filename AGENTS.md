@@ -25,6 +25,40 @@ The ideal commerce loop is:
 
 `Discover → Watch → Ask/Chat → Compare/Negotiate → Buy → Pay → Dispatch → Track → Receive → Review → Share → Buy Again`
 
+> **File note:** this file lives at the repo root as `AGENTS.md` (plural) so agentic coding tools pick it up automatically each session. For current build status, what's already implemented, and roadmap sequencing, see `docs/GRAPPlive_Kickstart_Prompt.md` — that file changes often; this one shouldn't.
+
+---
+
+# 1A. Tech Stack
+
+| Layer | Choice |
+|---|---|
+| Framework | Next.js 16 (App Router), TypeScript |
+| Styling | Tailwind CSS **v4** (`@theme` block in `app/globals.css` — there is no `tailwind.config.ts`) |
+| State | Zustand (`persist` middleware for anything that should survive refresh) |
+| Icons | `@tabler/icons-react` |
+| Target | Mobile-first, ~375px–428px primary, `md:` breakpoint for tablet widening. **No desktop layout, ever** — this is an explicit, repeated decision, not an oversight. |
+| Repo | `grapplive` |
+| Package manager | npm |
+
+**Brand colors** (`app/globals.css` `@theme` block, exposed as Tailwind classes like `bg-gl-brand`):
+Brand/action `#D6127A` · Green (good/complete) `#0B6E4F` · Amber (caution/pending — used deliberately even for "healthy" metrics, since amber means actionable, not finished) `#BA7517` · Red (urgent + Live indicator ONLY) `#C8102E` · Navy (informational label only, never interactive) `#2C2C6E`. No ethnic-specific symbols/patterns/language anywhere — plain warm English, modern/international-first visual language.
+
+---
+
+# 1B. Known Constraints — Read Before Writing Code
+
+These are hard-won lessons from this project's build process. They apply to every session, not just the first one.
+
+1. **Heredoc file-creation commands (`cat > file << 'EOF'`) have silently failed to write files repeatedly** in this project's workflow. Always verify file contents directly (`cat filename` or `grep -c "something-unique" filename`) after any file-creation step — never trust a line count alone, and never assume a described command actually ran.
+2. **`npm run build` is the source of truth, not `npm run dev`.** Run it after every meaningful change. A clean build with full `✓ Finished TypeScript in Xs` output is real confirmation; a route listing alone is not sufficient — always get the whole output.
+3. **Tailwind v4** — no `tailwind.config.ts`. Colors are Tailwind classes generated from the `@theme { --color-gl-brand: ... }` block in `app/globals.css`.
+4. **Next.js 16 App Router dynamic routes** use `params: Promise<{ id: string }>` and require `await params` in Server Components (e.g. `/product/[id]`, `/seller/[id]`, `/category/[slug]`). Client Components (`"use client"`) instead use `useParams<{ id: string }>()` from `next/navigation`. Don't mix the two patterns in the same file.
+5. Prefer Next.js `<Link>` over raw `<a>` for external links (WhatsApp/Signal/Telegram deep links included) — a prior tooling pipeline stripped raw `<a href=...>` tags from pasted code. If typing code directly in an editor, plain `<a>` is fine and more semantically correct.
+6. **Prefer full-file rewrites over targeted `sed`/`str_replace` edits** when working through a copy-paste terminal workflow — multi-line `sed` edits have repeatedly matched nothing or produced broken output in this project. More text per message, but more reliable.
+7. `localStorage.clear()` in browser DevTools is the standard way to reset to a guest/logged-out state for testing — it clears all persisted Zustand stores (session, cart, wishlist, following, etc., each under its own key).
+8. **Never expose settlement, commission, or payment-status computation client-side** (see §24, §42.3) — even in prototype/mock form, model these as if a backend will own them, so the eventual real implementation doesn't require re-architecting the client.
+
 ---
 
 # 2. Product Vision

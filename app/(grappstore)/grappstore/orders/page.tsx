@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { IconArrowLeft, IconChevronRight } from "@tabler/icons-react";
+import { IconChevronRight } from "@tabler/icons-react";
 import { useOrdersStore } from "@/lib/store/useOrdersStore";
-import { flattenGroups, type OrderStatus } from "@/lib/mock-data/orders";
+import { flattenGroups, groupTotal, type OrderStatus } from "@/lib/mock-data/orders";
 
 const statusLabel: Record<OrderStatus, { text: string; className: string }> = {
   awaiting_confirmation: { text: "Awaiting confirmation", className: "text-gl-amber" },
@@ -13,22 +13,21 @@ const statusLabel: Record<OrderStatus, { text: string; className: string }> = {
   delivered: { text: "Delivered", className: "text-gl-green" },
 };
 
-export default function BuyerOrdersPage() {
+export default function GrappStoreOrdersPage() {
   const orders = useOrdersStore((s) => s.orders);
-  const groups = flattenGroups(orders);
+  // Buyer's own order history, filtered to GrappStore's merchant record only —
+  // separate from the marketplace order groups shown at /account/orders.
+  const groups = flattenGroups(orders).filter((g) => g.sellerId === "grapplive-official");
 
   return (
-    <div className="pb-6">
-      <div className="flex items-center gap-2 px-3 md:px-5 pt-3.5 pb-3">
-        <Link href="/account" className="active:opacity-60 transition-opacity">
-          <IconArrowLeft size={18} className="text-gl-text" />
-        </Link>
-        <h1 className="text-[14px] font-semibold text-gl-text">My orders</h1>
-      </div>
+    <div>
+      <h1 className="px-3 md:px-5 pt-3.5 pb-3 text-[14px] font-semibold text-gl-text">
+        Your GrappStore orders
+      </h1>
 
       {groups.length === 0 ? (
         <div className="px-3 md:px-5 py-10 text-center text-[11px] text-gl-text-secondary">
-          You haven&apos;t placed any orders yet.
+          You haven&apos;t ordered from GrappStore yet.
         </div>
       ) : (
         <div className="px-3 md:px-5">
@@ -47,10 +46,8 @@ export default function BuyerOrdersPage() {
                 <div className="w-12 h-12 rounded-lg shrink-0 overflow-hidden gl-shimmer" />
                 <div className="flex-1 min-w-0">
                   <div className="text-[11px] text-gl-text truncate">{itemLabel}</div>
-                  <div className="text-[9px] text-gl-text-secondary">{group.sellerName}</div>
-                  <div className={`text-[9px] font-semibold mt-0.5 ${status.className}`}>
-                    {status.text}
-                  </div>
+                  <div className="text-[9px] text-gl-text-secondary">{formatGHSInline(groupTotal(group))}</div>
+                  <div className={`text-[9px] font-semibold mt-0.5 ${status.className}`}>{status.text}</div>
                 </div>
                 <IconChevronRight size={16} className="text-gl-text-muted shrink-0" />
               </Link>
@@ -60,4 +57,8 @@ export default function BuyerOrdersPage() {
       )}
     </div>
   );
+}
+
+function formatGHSInline(amount: number) {
+  return `GHS ${amount.toLocaleString("en-GH")}`;
 }

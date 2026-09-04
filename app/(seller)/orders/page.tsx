@@ -5,7 +5,7 @@ import { TabBar } from "@/components/ui/TabBar";
 import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
 import { useOrdersStore } from "@/lib/store/useOrdersStore";
 import { sellerTabs } from "@/lib/nav/seller-tabs";
-import type { Order, OrderStatus } from "@/lib/mock-data/orders";
+import { flattenGroups, groupTotal, type FlatOrderGroup, type OrderStatus } from "@/lib/mock-data/orders";
 
 type FilterTab = "needs_action" | "preparing" | "delivered";
 
@@ -17,22 +17,27 @@ function formatGHS(amount: number) {
   return `GHS ${amount.toLocaleString("en-GH")}`;
 }
 
+function itemsSummary(group: FlatOrderGroup) {
+  return group.items.map((i) => `${i.itemName} × ${i.quantity}`).join(", ");
+}
+
 function OrderCard({
-  order,
+  group,
   justUpdated,
   onConfirmPayment,
   onRequestDelivery,
   onMarkDelivered,
 }: {
-  order: Order;
+  group: FlatOrderGroup;
   justUpdated: boolean;
   onConfirmPayment: (id: string) => void;
   onRequestDelivery: (id: string) => void;
   onMarkDelivered: (id: string) => void;
 }) {
   const flashClass = justUpdated ? "gl-status-flash" : "";
+  const total = groupTotal(group);
 
-  if (order.status === "awaiting_confirmation") {
+  if (group.status === "awaiting_confirmation") {
     return (
       <div className={`mx-3 md:mx-5 mb-2 border-[1.5px] border-gl-brand rounded-lg p-3 bg-gl-brand-soft-bg ${flashClass}`}>
         <div className="flex justify-between mb-1">
@@ -41,14 +46,12 @@ function OrderCard({
           </span>
           <span className="text-[9px] text-gl-brand-soft-text">Direct MoMo</span>
         </div>
-        <div className="text-[11px] text-gl-text mb-0.5">
-          {order.itemName} × {order.quantity}
-        </div>
+        <div className="text-[11px] text-gl-text mb-0.5">{itemsSummary(group)}</div>
         <div className="text-[10px] text-gl-text-secondary mb-2">
-          {formatGHS(order.priceGHS)} · {order.buyerNote}
+          {formatGHS(total)} · {group.buyerNote}
         </div>
         <button
-          onClick={() => onConfirmPayment(order.id)}
+          onClick={() => onConfirmPayment(group.id)}
           className="w-full bg-gl-brand text-white rounded-md py-2 text-[10px] font-semibold transition-transform active:scale-[0.98] active:opacity-90"
         >
           Confirm payment received
@@ -57,24 +60,22 @@ function OrderCard({
     );
   }
 
-  if (order.status === "ready_to_pack") {
+  if (group.status === "ready_to_pack") {
     return (
       <div className={`mx-3 md:mx-5 mb-2 border border-gl-border rounded-lg p-3 ${flashClass}`}>
         <div className="flex justify-between mb-1">
           <span className="text-[10px] font-semibold text-gl-green">PAID · READY TO PACK</span>
           <span className="text-[9px] text-gl-text-secondary">Instant Confirm</span>
         </div>
-        <div className="text-[11px] text-gl-text mb-0.5">
-          {order.itemName} × {order.quantity}
-        </div>
+        <div className="text-[11px] text-gl-text mb-0.5">{itemsSummary(group)}</div>
         <div className="text-[10px] text-gl-text-secondary mb-2">
-          {formatGHS(order.priceGHS)}
-          {order.isResellerOrder && order.resellerMarkupGHS
-            ? ` · Reseller order · GHS ${order.resellerMarkupGHS} markup`
+          {formatGHS(total)}
+          {group.isResellerOrder && group.resellerMarkupGHS
+            ? ` · Reseller order · GHS ${group.resellerMarkupGHS} markup`
             : ""}
         </div>
         <button
-          onClick={() => onRequestDelivery(order.id)}
+          onClick={() => onRequestDelivery(group.id)}
           className="w-full bg-white text-gl-text border border-gl-border-strong rounded-md py-2 text-[10px] font-semibold transition-colors active:bg-gl-bg-muted"
         >
           Request delivery
@@ -83,42 +84,40 @@ function OrderCard({
     );
   }
 
-  if (order.status === "preparing") {
+  if (group.status === "preparing") {
     return (
       <div className={`mx-3 md:mx-5 mb-2 border border-gl-border rounded-lg p-3 ${flashClass}`}>
         <div className="flex justify-between mb-1">
           <span className="text-[10px] font-semibold text-gl-amber">PREPARING</span>
           <span className="text-[9px] text-gl-text-secondary">
-            {order.paymentMethod === "direct_momo" ? "Direct MoMo" : "Instant Confirm"}
+            {group.paymentMethod === "direct_momo" ? "Direct MoMo" : "Instant Confirm"}
           </span>
         </div>
-        <div className="text-[11px] text-gl-text">
-          {order.itemName} × {order.quantity}
-        </div>
+        <div className="text-[11px] text-gl-text">{itemsSummary(group)}</div>
         <div className="text-[10px] text-gl-text-secondary">
-          {formatGHS(order.priceGHS)} · Getting ready to hand to rider
+          {formatGHS(total)} · Getting ready to hand to rider
         </div>
       </div>
     );
   }
 
-  if (order.status === "out_for_delivery") {
+  if (group.status === "out_for_delivery") {
     return (
       <div className={`mx-3 md:mx-5 mb-2 border border-gl-border rounded-lg p-3 ${flashClass}`}>
         <div className="flex justify-between mb-1">
           <span className="text-[10px] font-semibold text-gl-text-secondary">OUT FOR DELIVERY</span>
           <span className="text-[9px] text-gl-text-secondary">
-            {order.paymentMethod === "direct_momo" ? "Direct MoMo" : "Instant Confirm"}
+            {group.paymentMethod === "direct_momo" ? "Direct MoMo" : "Instant Confirm"}
           </span>
         </div>
-        <div className="text-[11px] text-gl-text mb-0.5">{order.itemName} × {order.quantity}</div>
+        <div className="text-[11px] text-gl-text mb-0.5">{itemsSummary(group)}</div>
         <div className="text-[10px] text-gl-text-secondary mb-2">
-          {formatGHS(order.priceGHS)}
-          {order.riderName ? ` · Rider: ${order.riderName}` : ""}
-          {order.etaMinutes ? ` · ETA ${order.etaMinutes} min` : ""}
+          {formatGHS(total)}
+          {group.riderName ? ` · Rider: ${group.riderName}` : ""}
+          {group.etaMinutes ? ` · ETA ${group.etaMinutes} min` : ""}
         </div>
         <button
-          onClick={() => onMarkDelivered(order.id)}
+          onClick={() => onMarkDelivered(group.id)}
           className="w-full bg-white text-gl-text border border-gl-border-strong rounded-md py-2 text-[10px] font-semibold transition-colors active:bg-gl-bg-muted"
         >
           Mark as delivered
@@ -132,11 +131,11 @@ function OrderCard({
       <div className="flex justify-between mb-1">
         <span className="text-[10px] font-semibold text-gl-text-secondary">DELIVERED</span>
         <span className="text-[9px] text-gl-text-secondary">
-          {order.paymentMethod === "direct_momo" ? "Direct MoMo" : "Instant Confirm"}
+          {group.paymentMethod === "direct_momo" ? "Direct MoMo" : "Instant Confirm"}
         </span>
       </div>
-      <div className="text-[11px] text-gl-text">{order.itemName} × {order.quantity}</div>
-      <div className="text-[10px] text-gl-text-secondary">{formatGHS(order.priceGHS)}</div>
+      <div className="text-[11px] text-gl-text">{itemsSummary(group)}</div>
+      <div className="text-[10px] text-gl-text-secondary">{formatGHS(total)}</div>
     </div>
   );
 }
@@ -158,12 +157,13 @@ export default function OrdersPage() {
     );
   }
 
-  const needsActionCount = orders.filter((o) => NEEDS_ACTION_STATUSES.includes(o.status)).length;
+  const groups = flattenGroups(orders);
+  const needsActionCount = groups.filter((g) => NEEDS_ACTION_STATUSES.includes(g.status)).length;
 
-  const filteredOrders = orders.filter((o) => {
-    if (activeFilter === "needs_action") return NEEDS_ACTION_STATUSES.includes(o.status);
-    if (activeFilter === "preparing") return PREPARING_STATUSES.includes(o.status);
-    return DELIVERED_STATUSES.includes(o.status);
+  const filteredGroups = groups.filter((g) => {
+    if (activeFilter === "needs_action") return NEEDS_ACTION_STATUSES.includes(g.status);
+    if (activeFilter === "preparing") return PREPARING_STATUSES.includes(g.status);
+    return DELIVERED_STATUSES.includes(g.status);
   });
 
   const tabs: { key: FilterTab; label: string }[] = [
@@ -172,9 +172,9 @@ export default function OrdersPage() {
     { key: "delivered", label: "Delivered" },
   ];
 
-  const flashThenRun = (orderId: string, action: (id: string) => void) => {
-    action(orderId);
-    setRecentlyUpdatedId(orderId);
+  const flashThenRun = (groupId: string, action: (id: string) => void) => {
+    action(groupId);
+    setRecentlyUpdatedId(groupId);
     setTimeout(() => setRecentlyUpdatedId(null), 1000);
   };
 
@@ -198,16 +198,16 @@ export default function OrdersPage() {
         ))}
       </div>
 
-      {filteredOrders.length === 0 ? (
+      {filteredGroups.length === 0 ? (
         <div className="px-3 md:px-5 py-8 text-center text-[11px] text-gl-text-secondary">
           Nothing here right now.
         </div>
       ) : (
-        filteredOrders.map((order) => (
+        filteredGroups.map((group) => (
           <OrderCard
-            key={order.id}
-            order={order}
-            justUpdated={order.id === recentlyUpdatedId}
+            key={group.id}
+            group={group}
+            justUpdated={group.id === recentlyUpdatedId}
             onConfirmPayment={(id) => flashThenRun(id, confirmPayment)}
             onRequestDelivery={(id) => flashThenRun(id, requestDelivery)}
             onMarkDelivered={(id) => flashThenRun(id, markDelivered)}
