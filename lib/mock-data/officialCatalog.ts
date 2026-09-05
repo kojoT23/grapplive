@@ -17,9 +17,23 @@ export const officialCatalogProducts: CatalogProduct[] = [
     rating: 4.6,
     reviewCount: 61,
     imageCount: 4,
+    videoSlideIndex: 1,
     deliveryEstimate: "3–5 days, GRAPPlive guaranteed",
     returnPolicyDays: 7,
     warranty: "12 months",
+    description:
+      "15W fast wireless charger compatible with all Qi-enabled phones. Slim, non-slip base with an LED charge indicator that dims automatically at night.\n\nOver-charge and over-heat protection built in, so it's safe to leave charging overnight.",
+    specs: [
+      { label: "Output", value: "15W max (Qi-compatible)" },
+      { label: "Input", value: "USB-C" },
+      { label: "Compatibility", value: "All Qi-enabled phones" },
+    ],
+    boxContents: ["1 × Wireless charger", "1 × USB-C cable"],
+    stockCount: 42,
+    colorVariants: [
+      { label: "Black", hex: "#1A1A1A" },
+      { label: "White", hex: "#F5F5F5" },
+    ],
   },
   {
     id: "gs-2",
@@ -39,8 +53,24 @@ export const officialCatalogProducts: CatalogProduct[] = [
     rating: 4.7,
     reviewCount: 89,
     imageCount: 4,
+    videoSlideIndex: 0,
     deliveryEstimate: "3–5 days, GRAPPlive guaranteed",
     returnPolicyDays: 7,
+    description:
+      "A soft floral wrap dress with a flattering waist tie and flowy midi length. Lightweight fabric, perfect for warm-weather days and evening outings alike.\n\nAdjustable wrap tie fits a range of body shapes comfortably.",
+    specs: [
+      { label: "Material", value: "Polyester crepe" },
+      { label: "Fit", value: "Wrap style, adjustable tie" },
+      { label: "Available sizes", value: "XS – XL" },
+      { label: "Care", value: "Machine wash cold, gentle cycle" },
+    ],
+    boxContents: ["1 × Wrap dress"],
+    stockCount: 19,
+    colorVariants: [
+      { label: "Pink floral", hex: "#E8A0BF" },
+      { label: "Blue floral", hex: "#A0C4E8" },
+      { label: "Cream floral", hex: "#EFE6D8" },
+    ],
   },
   {
     id: "gs-3",
@@ -63,6 +93,20 @@ export const officialCatalogProducts: CatalogProduct[] = [
     deliveryEstimate: "3–5 days, GRAPPlive guaranteed",
     returnPolicyDays: 7,
     warranty: "12 months",
+    description:
+      "Premium true wireless earbuds with active noise cancellation, 30-hour total battery life, and a low-latency gaming mode. Touch controls and multi-point Bluetooth pairing to switch between two devices instantly.\n\nBacked by GRAPPlive's own 12-month warranty — genuine product, guaranteed.",
+    specs: [
+      { label: "Bluetooth version", value: "5.3" },
+      { label: "Battery life", value: "8 hrs (buds) / 30 hrs (with case)" },
+      { label: "Noise cancellation", value: "Active (ANC)" },
+      { label: "Water resistance", value: "IPX5" },
+    ],
+    boxContents: ["2 × Earbuds", "1 × Charging case", "1 × USB-C cable", "2 × Extra ear tip sizes"],
+    stockCount: 33,
+    colorVariants: [
+      { label: "Midnight black", hex: "#1A1A1A" },
+      { label: "Pearl white", hex: "#F5F5F5" },
+    ],
   },
   {
     id: "gs-4",
@@ -82,6 +126,15 @@ export const officialCatalogProducts: CatalogProduct[] = [
     imageCount: 4,
     deliveryEstimate: "3–5 days, GRAPPlive guaranteed",
     returnPolicyDays: 7,
+    description:
+      "A 3-step rose-infused skincare set — cleanser, toner, and moisturizer — formulated for daily glow. Free from parabens and sulfates, suitable for all skin types.\n\nGenuine, sealed product sourced and sold directly by GRAPPlive.",
+    specs: [
+      { label: "Set includes", value: "Cleanser, toner, moisturizer" },
+      { label: "Skin type", value: "All skin types" },
+      { label: "Free from", value: "Parabens, sulfates" },
+    ],
+    boxContents: ["1 × Cleanser (150ml)", "1 × Toner (150ml)", "1 × Moisturizer (50ml)"],
+    stockCount: 21,
   },
 ];
 

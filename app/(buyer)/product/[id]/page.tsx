@@ -15,10 +15,21 @@ import {
   IconX,
   IconMinus,
   IconPlus,
+  IconPlayerPlayFilled,
+  IconCheck,
 } from "@tabler/icons-react";
 import { useAuthGate } from "@/lib/hooks/useAuthGate";
 import { getProductById } from "@/lib/mock-data/catalog";
 import { useCartStore } from "@/lib/store/useCartStore";
+import { ProductReviews } from "@/components/ui/ProductReviews";
+
+function isLightColor(hex: string) {
+  const c = hex.replace("#", "");
+  const r = parseInt(c.substring(0, 2), 16);
+  const g = parseInt(c.substring(2, 4), 16);
+  const b = parseInt(c.substring(4, 6), 16);
+  return (r * 299 + g * 587 + b * 114) / 1000 > 180;
+}
 
 export default function ProductPage() {
   const router = useRouter();
@@ -27,6 +38,8 @@ export default function ProductPage() {
   const requireAuth = useAuthGate();
   const [showCallPicker, setShowCallPicker] = useState(false);
   const [quantity, setQuantity] = useState(1);
+  const [activeImage, setActiveImage] = useState(0);
+  const [selectedColorIndex, setSelectedColorIndex] = useState(0);
 
   const product = getProductById(params.id);
 
@@ -59,6 +72,16 @@ export default function ProductPage() {
   const decreaseQuantity = () => setQuantity((q) => Math.max(1, q - 1));
   const increaseQuantity = () => setQuantity((q) => q + 1);
 
+  const handleGalleryScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    const index = Math.round(el.scrollLeft / el.clientWidth);
+    setActiveImage(index);
+  };
+
+  const imageCount = product.imageCount ?? 1;
+  const images = Array.from({ length: imageCount }, (_, i) => i);
+  const selectedColor = product.colorVariants?.[selectedColorIndex];
+
   const whatsappNumber = product.sellerSocials.whatsappNumber;
   const signalNumber = product.sellerSocials.signalNumber;
   const telegramHandle = product.sellerSocials.telegramHandle;
@@ -81,7 +104,31 @@ export default function ProductPage() {
 
   return (
     <div className="pb-4">
-      <div className="h-[150px] relative gl-shimmer">
+      <div className="relative">
+        <div
+          onScroll={handleGalleryScroll}
+          className="h-[220px] flex overflow-x-auto snap-x snap-mandatory scrollbar-hide"
+        >
+          {images.map((i) => {
+            const isVideo = product.videoSlideIndex === i;
+            return (
+              <div key={i} className="w-full h-full shrink-0 snap-center gl-shimmer relative">
+                {isVideo && (
+                  <>
+                    <span className="absolute top-2.5 left-2.5 bg-black/60 text-white text-[8px] font-semibold px-1.5 py-0.5 rounded">
+                      VIDEO
+                    </span>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-12 h-12 rounded-full bg-black/45 flex items-center justify-center">
+                        <IconPlayerPlayFilled size={18} className="text-white ml-0.5" />
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </div>
         <button
           onClick={() => router.back()}
           className="absolute top-2 left-2 w-7 h-7 rounded-full bg-black/30 flex items-center justify-center active:bg-black/50 transition-colors"
@@ -94,6 +141,18 @@ export default function ProductPage() {
           </div>
         )}
       </div>
+      {imageCount > 1 && (
+        <div className="flex items-center justify-center gap-1.5 pt-2">
+          {images.map((i) => (
+            <div
+              key={i}
+              className={`h-1.5 rounded-full transition-all ${
+                i === activeImage ? "w-4 bg-gl-brand" : "w-1.5 bg-gl-border-strong"
+              }`}
+            />
+          ))}
+        </div>
+      )}
 
       <div className="px-3 md:px-5 pt-2.5">
         <div className="text-[13px] text-gl-text mb-1">{product.name}</div>
@@ -105,6 +164,35 @@ export default function ProductPage() {
             </span>
           )}
         </div>
+
+        {product.colorVariants && product.colorVariants.length > 0 && (
+          <div className="mb-3">
+            <div className="text-[11px] text-gl-text-secondary mb-1.5">
+              Color: <span className="text-gl-text font-semibold">{selectedColor?.label}</span>
+            </div>
+            <div className="flex gap-2">
+              {product.colorVariants.map((variant, i) => {
+                const isSelected = i === selectedColorIndex;
+                const showDarkCheck = isLightColor(variant.hex);
+                return (
+                  <button
+                    key={variant.label}
+                    onClick={() => setSelectedColorIndex(i)}
+                    aria-label={variant.label}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center transition-transform active:scale-90 ${
+                      isSelected ? "ring-2 ring-offset-2 ring-gl-brand" : ""
+                    }`}
+                    style={{ backgroundColor: variant.hex }}
+                  >
+                    {isSelected && (
+                      <IconCheck size={14} className={showDarkCheck ? "text-gl-text" : "text-white"} />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <Link
           href={"/seller/" + product.sellerId}
@@ -212,6 +300,8 @@ export default function ProductPage() {
             </button>
           </div>
         </div>
+
+        <ProductReviews productId={product.id} />
       </div>
 
       <div className="px-3 md:px-5 pt-2.5 border-t border-gl-border flex gap-2">
