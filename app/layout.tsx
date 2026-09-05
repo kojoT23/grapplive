@@ -5,6 +5,7 @@ import { AuthPromptModal } from "@/components/ui/AuthPromptModal";
 export const metadata: Metadata = {
   title: "GRAPPlive",
   description: "Buy it. Try it. Zoom it. Live.",
+  manifest: "/manifest.json",
 };
 
 export const viewport: Viewport = {
@@ -12,6 +13,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  themeColor: "#D6127A",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
