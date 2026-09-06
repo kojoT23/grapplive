@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { IconArrowLeft } from "@tabler/icons-react";
+import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
 import { useOrdersStore } from "@/lib/store/useOrdersStore";
 import { flattenGroups, groupTotal, type FlatOrderGroup, type OrderStatus } from "@/lib/mock-data/orders";
 
@@ -104,11 +105,24 @@ function FulfillmentCard({
 }
 
 export default function GrappStoreFulfillmentPage() {
+  // TEMPORARY: gated behind the existing "sell" role since there's no
+  // real GRAPPlive-staff role in the auth model yet. Replace with a
+  // proper staff/admin role check once real auth exists — this is not
+  // correct access control long-term, just better than fully open.
+  const { isChecking } = useRequireAuth("sell");
   const orders = useOrdersStore((s) => s.orders);
   const requestDelivery = useOrdersStore((s) => s.requestDelivery);
   const markDelivered = useOrdersStore((s) => s.markDelivered);
   const [activeFilter, setActiveFilter] = useState<FilterTab>("needs_action");
   const [recentlyUpdatedId, setRecentlyUpdatedId] = useState<string | null>(null);
+
+  if (isChecking) {
+    return (
+      <div className="flex items-center justify-center min-h-dvh">
+        <div className="text-[12px] text-gl-text-secondary">Loading…</div>
+      </div>
+    );
+  }
 
   const groups = flattenGroups(orders).filter((g) => g.sellerId === "grapplive-official");
   const needsActionCount = groups.filter((g) => NEEDS_ACTION_STATUSES.includes(g.status)).length;

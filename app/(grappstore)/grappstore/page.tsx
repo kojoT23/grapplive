@@ -2,19 +2,21 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { IconSearch, IconMessageCircle, IconShoppingCart, IconBolt } from "@tabler/icons-react";
+import { IconSearch, IconMessageCircle, IconShoppingCart, IconBolt, IconDots } from "@tabler/icons-react";
 import { ProductCard } from "@/components/ui/ProductCard";
 import { officialCatalogProducts } from "@/lib/mock-data/officialCatalog";
 
-const categories: { label: string; slug: string }[] = [
-  { label: "Fashion", slug: "fashion" },
-  { label: "Phones", slug: "phones" },
-  { label: "Home", slug: "home" },
-  { label: "Beauty", slug: "beauty" },
+// Home page category row matches the reference mockup exactly: the first
+// four of the six GrappStore categories, plus a "More" tile linking to
+// the full categories grid — not a separate data source from
+// grappCategoryTiles, just a shorter slice of it for the home screen.
+const homeCategoryPreview: { label: string; slug: string }[] = [
+  { label: "Women", slug: "women" },
+  { label: "Men", slug: "men" },
+  { label: "Children", slug: "children" },
+  { label: "Accessories", slug: "accessories" },
 ];
 
-// Deals of the Day countdown resets to this many seconds whenever it hits
-// zero — a real backend would drive this from an actual deal end-time.
 const DEAL_DURATION_SECONDS = 2 * 3600 + 15 * 60 + 45;
 
 function formatCountdown(totalSeconds: number) {
@@ -81,9 +83,14 @@ export default function GrappStoreHomePage() {
         </div>
       </Link>
 
-      <h3 className="px-3 md:px-5 pb-2 text-[13px] font-semibold text-gl-text">Shop by category</h3>
+      <div className="flex items-center justify-between px-3 md:px-5 pb-2">
+        <h3 className="text-[13px] font-semibold text-gl-text">Shop by category</h3>
+        <Link href="/grappstore/categories" className="text-[10px] font-semibold text-gl-brand active:opacity-70 transition-opacity">
+          View all
+        </Link>
+      </div>
       <div className="flex gap-3.5 md:gap-5 px-3 md:px-5 pb-3.5 overflow-x-auto">
-        {categories.map((cat) => (
+        {homeCategoryPreview.map((cat) => (
           <Link
             key={cat.slug}
             href={`/grappstore/category/${cat.slug}`}
@@ -93,6 +100,15 @@ export default function GrappStoreHomePage() {
             {cat.label}
           </Link>
         ))}
+        <Link
+          href="/grappstore/categories"
+          className="text-center text-[9px] text-gl-text-secondary shrink-0 transition-transform active:scale-90"
+        >
+          <div className="w-[46px] h-[46px] md:w-14 md:h-14 rounded-full mx-auto mb-1 bg-gl-bg-muted flex items-center justify-center">
+            <IconDots size={18} className="text-gl-text-secondary" />
+          </div>
+          More
+        </Link>
       </div>
 
       {dealProducts.length > 0 && (

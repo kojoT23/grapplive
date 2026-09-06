@@ -1,5 +1,14 @@
 export type ProductOrigin = "third_party_seller" | "verified_producer" | "grapp_import";
-export type ProductCategory = "fashion" | "phones" | "home" | "beauty";
+export type ProductCategory =
+  | "fashion"
+  | "phones"
+  | "home"
+  | "beauty"
+  | "women"
+  | "men"
+  | "children"
+  | "accessories"
+  | "electronics";
 
 export type SellerSocials = {
   whatsappNumber?: string;
