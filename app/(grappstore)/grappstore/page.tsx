@@ -1,15 +1,10 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { IconSearch, IconMessageCircle, IconShoppingCart, IconBolt, IconDots } from "@tabler/icons-react";
+import { IconSearch, IconMessageCircle, IconShoppingCart, IconDots, IconPlayerPlayFilled, IconTruckDelivery, IconShieldCheck, IconRotateClockwise, IconPackage } from "@tabler/icons-react";
 import { ProductCard } from "@/components/ui/ProductCard";
+import { BannerCarousel } from "@/components/grappstore/BannerCarousel";
+import { DealsCountdown } from "@/components/grappstore/DealsCountdown";
 import { officialCatalogProducts } from "@/lib/mock-data/officialCatalog";
 
-// Home page category row matches the reference mockup exactly: the first
-// four of the six GrappStore categories, plus a "More" tile linking to
-// the full categories grid — not a separate data source from
-// grappCategoryTiles, just a shorter slice of it for the home screen.
 const homeCategoryPreview: { label: string; slug: string }[] = [
   { label: "Women", slug: "women" },
   { label: "Men", slug: "men" },
@@ -17,28 +12,16 @@ const homeCategoryPreview: { label: string; slug: string }[] = [
   { label: "Accessories", slug: "accessories" },
 ];
 
-const DEAL_DURATION_SECONDS = 2 * 3600 + 15 * 60 + 45;
-
-function formatCountdown(totalSeconds: number) {
-  const hrs = Math.floor(totalSeconds / 3600);
-  const mins = Math.floor((totalSeconds % 3600) / 60);
-  const secs = totalSeconds % 60;
-  const pad = (n: number) => n.toString().padStart(2, "0");
-  return { hrs: pad(hrs), mins: pad(mins), secs: pad(secs) };
-}
+const trustStats: { icon: typeof IconShieldCheck; value: string; label: string }[] = [
+  { icon: IconPackage, value: "500+", label: "Genuine products" },
+  { icon: IconTruckDelivery, value: "3–5 days", label: "Delivery" },
+  { icon: IconShieldCheck, value: "12 mo", label: "Warranty" },
+  { icon: IconRotateClockwise, value: "7 days", label: "Easy returns" },
+];
 
 export default function GrappStoreHomePage() {
-  const [secondsLeft, setSecondsLeft] = useState(DEAL_DURATION_SECONDS);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setSecondsLeft((s) => (s <= 1 ? DEAL_DURATION_SECONDS : s - 1));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const countdown = formatCountdown(secondsLeft);
   const dealProducts = officialCatalogProducts.filter((p) => p.discountPercent != null);
+  const videoProducts = officialCatalogProducts.filter((p) => p.videoSlideIndex != null);
 
   return (
     <div>
@@ -63,25 +46,23 @@ export default function GrappStoreHomePage() {
         Search products, brands or stores…
       </Link>
 
-      <Link
-        href="/grappstore/categories"
-        className="mx-3 md:mx-5 mb-4 rounded-lg px-4 py-4 flex items-center justify-between relative overflow-hidden transition-transform active:scale-[0.98]"
-        style={{ background: "linear-gradient(135deg, var(--color-gl-brand), #A30D5F)" }}
-      >
-        <div className="absolute -top-6 -right-6 w-28 h-28 rounded-full bg-white/10" />
-        <div className="absolute -bottom-8 -right-2 w-20 h-20 rounded-full bg-white/10" />
-        <div className="relative">
-          <div className="flex items-center gap-1 text-[10px] font-bold text-white/90 mb-1">
-            <IconBolt size={12} className="fill-white" />
-            FLASH DEALS
-          </div>
-          <div className="text-[18px] font-bold text-white leading-tight mb-0.5">Up to 50% off</div>
-          <div className="text-[10px] text-white/80 mb-2.5">On top picks this week</div>
-          <span className="inline-block bg-white text-gl-brand text-[10px] font-bold px-3 py-1.5 rounded-md">
-            Shop Now
-          </span>
-        </div>
-      </Link>
+      <BannerCarousel />
+
+      {/* Trust-stat band — given its own quiet section with breathing room,
+          large numbers, a soft background and dividers, rather than being
+          squeezed into a tight row where it read as a footnote. */}
+      <div className="mx-3 md:mx-5 mb-5 bg-gl-bg-muted rounded-lg py-4 grid grid-cols-4 divide-x divide-gl-border">
+        {trustStats.map((stat) => {
+          const Icon = stat.icon;
+          return (
+            <div key={stat.label} className="text-center px-1">
+              <Icon size={18} className="text-gl-brand mx-auto mb-1.5" />
+              <div className="text-[15px] font-bold text-gl-text leading-tight tracking-tight">{stat.value}</div>
+              <div className="text-[8.5px] text-gl-text-secondary leading-snug mt-0.5">{stat.label}</div>
+            </div>
+          );
+        })}
+      </div>
 
       <div className="flex items-center justify-between px-3 md:px-5 pb-2">
         <h3 className="text-[13px] font-semibold text-gl-text">Shop by category</h3>
@@ -111,20 +92,39 @@ export default function GrappStoreHomePage() {
         </Link>
       </div>
 
+      {videoProducts.length > 0 && (
+        <>
+          <h3 className="px-3 md:px-5 pb-2 text-[13px] font-semibold text-gl-text">Watch &amp; shop</h3>
+          <div className="flex gap-2.5 px-3 md:px-5 pb-4 overflow-x-auto">
+            {videoProducts.map((product) => (
+              <Link
+                key={product.id}
+                href={`/grappstore/product/${product.id}`}
+                className="w-[120px] shrink-0 transition-transform active:scale-95"
+              >
+                <div className="w-full h-[150px] rounded-lg gl-shimmer relative overflow-hidden mb-1.5">
+                  <span className="absolute top-1.5 left-1.5 bg-black/60 text-white text-[8px] font-semibold px-1.5 py-0.5 rounded">
+                    VIDEO
+                  </span>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-9 h-9 rounded-full bg-black/45 flex items-center justify-center">
+                      <IconPlayerPlayFilled size={14} className="text-white ml-0.5" />
+                    </div>
+                  </div>
+                </div>
+                <div className="text-[10px] text-gl-text leading-snug line-clamp-2 mb-0.5">{product.name}</div>
+                <div className="text-[10px] font-semibold text-gl-text">GHS {product.priceGHS}</div>
+              </Link>
+            ))}
+          </div>
+        </>
+      )}
+
       {dealProducts.length > 0 && (
         <>
           <div className="flex items-center justify-between px-3 md:px-5 pb-2">
             <h3 className="text-[13px] font-semibold text-gl-text">Deals of the day</h3>
-            <div className="flex items-center gap-1">
-              {[countdown.hrs, countdown.mins, countdown.secs].map((unit, i) => (
-                <span key={i} className="flex items-center gap-1">
-                  <span className="bg-gl-text text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
-                    {unit}
-                  </span>
-                  {i < 2 && <span className="text-[10px] font-bold text-gl-text">:</span>}
-                </span>
-              ))}
-            </div>
+            <DealsCountdown />
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3 px-3 md:px-5 pb-4">
             {dealProducts.map((product) => (
