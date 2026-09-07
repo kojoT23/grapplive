@@ -11,16 +11,22 @@ export type GrappStoreCartItem = {
 
 type GrappStoreCartState = {
   items: GrappStoreCartItem[];
+  hasHydrated: boolean;
+  setHasHydrated: (value: boolean) => void;
   addItem: (productId: string, quantity: number) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
 };
 
+// Same hasHydrated pattern as the other persisted stores — server has no
+// localStorage, so items is unknowably empty until hydration completes.
 export const useGrappStoreCartStore = create<GrappStoreCartState>()(
   persist(
     (set) => ({
       items: [],
+      hasHydrated: false,
+      setHasHydrated: (value) => set({ hasHydrated: value }),
       addItem: (productId, quantity) =>
         set((state) => {
           const existing = state.items.find((i) => i.productId === productId);
@@ -43,6 +49,11 @@ export const useGrappStoreCartStore = create<GrappStoreCartState>()(
         })),
       clearCart: () => set({ items: [] }),
     }),
-    { name: "grapplelive-grappstore-cart" }
+    {
+      name: "grapplelive-grappstore-cart",
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
+    }
   )
 );

@@ -22,7 +22,13 @@ const badgeConfig: Record<VerifiedTier, { label: string; icon: typeof IconShield
 };
 
 export function ProductCard({ product }: { product: CatalogProduct }) {
-  const isWishlisted = useWishlistStore((s) => s.isWishlisted(product.id));
+  const hasHydrated = useWishlistStore((s) => s.hasHydrated);
+  const isWishlistedRaw = useWishlistStore((s) => s.isWishlisted(product.id));
+  // Before hydration, the real wishlist state is unknowable (server has no
+  // localStorage) — always render the default, unwishlisted heart until
+  // hasHydrated flips true, so server and first-paint client HTML match.
+  const isWishlisted = hasHydrated && isWishlistedRaw;
+
   const toggleWishlist = useWishlistStore((s) => s.toggle);
   const addToMarketplaceCart = useCartStore((s) => s.addItem);
   const addToGrappStoreCart = useGrappStoreCartStore((s) => s.addItem);

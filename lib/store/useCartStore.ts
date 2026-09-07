@@ -8,16 +8,25 @@ export type CartItem = {
 
 type CartState = {
   items: CartItem[];
+  hasHydrated: boolean;
+  setHasHydrated: (value: boolean) => void;
   addItem: (productId: string, quantity: number) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
 };
 
+// Same hasHydrated pattern as useAppStore/useWishlistStore/useFollowingStore
+// — server has no localStorage, so items is unknowably empty until
+// hydration completes. Cart badge counts and cart-page totals should check
+// hasHydrated before trusting items, same as ProductCard now does for
+// wishlist state.
 export const useCartStore = create<CartState>()(
   persist(
     (set) => ({
       items: [],
+      hasHydrated: false,
+      setHasHydrated: (value) => set({ hasHydrated: value }),
       addItem: (productId, quantity) =>
         set((state) => {
           const existing = state.items.find((i) => i.productId === productId);
@@ -40,6 +49,11 @@ export const useCartStore = create<CartState>()(
         })),
       clearCart: () => set({ items: [] }),
     }),
-    { name: "grapplelive-cart" }
+    {
+      name: "grapplelive-cart",
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
+    }
   )
 );

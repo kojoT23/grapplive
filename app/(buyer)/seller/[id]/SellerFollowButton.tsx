@@ -5,7 +5,13 @@ import { useFollowingStore } from "@/lib/store/useFollowingStore";
 import { useAuthGate } from "@/lib/hooks/useAuthGate";
 
 export function SellerFollowButton({ sellerId }: { sellerId: string }) {
-  const isFollowing = useFollowingStore((s) => s.isFollowing(sellerId));
+  const hasHydrated = useFollowingStore((s) => s.hasHydrated);
+  const isFollowingRaw = useFollowingStore((s) => s.isFollowing(sellerId));
+  // Same hydration guard as ProductCard's wishlist heart — render the
+  // default "not following" state until hasHydrated flips true, so server
+  // and first-paint client HTML match.
+  const isFollowing = hasHydrated && isFollowingRaw;
+
   const toggle = useFollowingStore((s) => s.toggle);
   const requireAuth = useAuthGate();
 
