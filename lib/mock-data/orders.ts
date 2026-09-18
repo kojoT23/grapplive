@@ -1,4 +1,12 @@
-export type PaymentMethod = "direct_momo" | "instant_confirm";
+// "instant_confirm" (marketplace) and "grapplive_fulfilled" (GrappStore)
+// used to share the same value. They mean different things in practice:
+// instant_confirm is a paid opt-in a marketplace buyer chooses to skip
+// waiting on a seller; grapplive_fulfilled is GrappStore's only option,
+// free, because there's no seller to wait on in the first place — GRAPPlive
+// is the merchant of record (AGENTS.md §40.5). Conflating them would have
+// been a landmine for any future seller dashboard, analytics, or backend
+// work that groups/filters orders by payment method.
+export type PaymentMethod = "direct_momo" | "instant_confirm" | "grapplive_fulfilled";
 
 export type OrderStatus =
   | "awaiting_confirmation"

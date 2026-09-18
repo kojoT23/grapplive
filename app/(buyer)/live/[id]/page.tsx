@@ -27,18 +27,33 @@ export default function LiveBroadcastPage() {
         </div>
       </div>
 
+      {/* Bumped from 22px to 36px — this is the button someone reaches for
+          when they urgently want to back out of something, and it was the
+          smallest tap target on the whole app. */}
       <button
         onClick={() => router.back()}
-        className="absolute top-2.5 right-3 w-[22px] h-[22px] rounded-full bg-white/15 flex items-center justify-center active:bg-white/25 transition-colors"
+        aria-label="Close live broadcast"
+        className="absolute top-2 right-2 w-9 h-9 rounded-full bg-white/15 flex items-center justify-center active:bg-white/25 transition-colors"
       >
-        <IconX size={12} className="text-white" />
+        <IconX size={16} className="text-white" />
       </button>
 
-      <div className="absolute right-3 bottom-[150px] flex flex-col gap-3 items-center">
-        <button className="active:scale-90 transition-transform">
+      {/* These were bare icons with no defined tap zone at all — just the
+          glyph itself. On a live overlay where people tap fast to react,
+          that's the most fragile interaction on the page. Wrapped in a
+          real ~40px hit area, same treatment as the close button, plus
+          aria-labels to match every other icon-only button in the app. */}
+      <div className="absolute right-3 bottom-[150px] flex flex-col gap-2 items-center">
+        <button
+          aria-label="Like"
+          className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center active:scale-90 active:bg-white/20 transition-all"
+        >
           <IconHeart size={20} className="text-gl-brand" />
         </button>
-        <button className="active:scale-90 transition-transform">
+        <button
+          aria-label="Share"
+          className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center active:scale-90 active:bg-white/20 transition-all"
+        >
           <IconShare size={18} className="text-white" />
         </button>
       </div>
@@ -69,6 +84,9 @@ export default function LiveBroadcastPage() {
         </button>
       )}
 
+      {/* Left as-is — unclear whether this reserved space below the fold is
+          intentional (room for a future comments feed) or leftover.
+          Flagging rather than removing; confirm before touching. */}
       <div className="h-[360px]" />
     </div>
   );

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import {
   IconArrowLeft,
   IconMinus,
@@ -13,13 +14,15 @@ import {
   IconStarFilled,
   IconChevronDown,
   IconBox,
-  IconPlayerPlayFilled,
   IconCheck,
 } from "@tabler/icons-react";
 import { getOfficialProductById } from "@/lib/mock-data/officialCatalog";
+import { productIllustrationByProductId } from "@/lib/mock-data/productIllustrations";
+import { productVideoIdByProductId } from "@/lib/mock-data/productVideos";
 import { useGrappStoreCartStore } from "@/lib/store/useGrappStoreCartStore";
 import { useAuthGate } from "@/lib/hooks/useAuthGate";
 import { ProductReviews } from "@/components/ui/ProductReviews";
+import { YouTubeEmbed } from "@/components/ui/YouTubeEmbed";
 
 function formatGHS(amount: number) {
   return `GHS ${amount.toLocaleString("en-GH")}`;
@@ -32,6 +35,8 @@ function isLightColor(hex: string) {
   const b = parseInt(c.substring(4, 6), 16);
   return (r * 299 + g * 587 + b * 114) / 1000 > 180;
 }
+
+type GallerySlide = { type: "image" } | { type: "video" } | { type: "shimmer" };
 
 export default function GrappStoreProductPage() {
   const params = useParams<{ id: string }>();
@@ -56,8 +61,20 @@ export default function GrappStoreProductPage() {
     );
   }
 
-  const imageCount = product.imageCount ?? 1;
-  const images = Array.from({ length: imageCount }, (_, i) => i);
+  const illustrationSrc = productIllustrationByProductId[product.id];
+  const videoId = productVideoIdByProductId[product.id];
+  const hasVideoSlide = product.videoSlideIndex != null;
+
+  const slides: GallerySlide[] = illustrationSrc
+    ? hasVideoSlide
+      ? product.videoSlideIndex === 0
+        ? [{ type: "video" }, { type: "image" }]
+        : [{ type: "image" }, { type: "video" }]
+      : [{ type: "image" }]
+    : Array.from({ length: product.imageCount ?? 1 }, (_, i) => ({
+        type: product.videoSlideIndex === i ? "video" : "shimmer",
+      }));
+
   const descriptionLines = product.description?.split("\n\n") ?? [];
   const hasLongDescription = descriptionLines.length > 1;
   const selectedColor = product.colorVariants?.[selectedColorIndex];
@@ -95,29 +112,32 @@ export default function GrappStoreProductPage() {
         onScroll={handleScroll}
         className="w-full h-72 flex overflow-x-auto snap-x snap-mandatory scrollbar-hide"
       >
-        {images.map((i) => {
-          const isVideo = product.videoSlideIndex === i;
-          return (
-            <div key={i} className="w-full h-full shrink-0 snap-center gl-shimmer relative">
-              {isVideo && (
-                <>
-                  <span className="absolute top-2.5 left-2.5 bg-black/60 text-white text-[8px] font-semibold px-1.5 py-0.5 rounded">
-                    VIDEO
-                  </span>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-12 h-12 rounded-full bg-black/45 flex items-center justify-center">
-                      <IconPlayerPlayFilled size={18} className="text-white ml-0.5" />
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          );
-        })}
+        {slides.map((slide, i) => (
+          <div
+            key={i}
+            className={`w-full h-full shrink-0 snap-center relative ${
+              slide.type === "image" ? "bg-white" : slide.type === "video" ? "bg-black" : "gl-shimmer"
+            }`}
+          >
+            {slide.type === "image" && illustrationSrc ? (
+              <Image
+                src={illustrationSrc}
+                alt={product.name}
+                fill
+                sizes="480px"
+                className="object-cover"
+                unoptimized
+              />
+            ) : null}
+            {slide.type === "video" && videoId ? (
+              <YouTubeEmbed videoId={videoId} posterSrc={illustrationSrc} title={product.name} />
+            ) : null}
+          </div>
+        ))}
       </div>
-      {imageCount > 1 && (
+      {slides.length > 1 && (
         <div className="flex items-center justify-center gap-1.5 pt-2">
-          {images.map((i) => (
+          {slides.map((_, i) => (
             <div
               key={i}
               className={`h-1.5 rounded-full transition-all ${
@@ -129,7 +149,7 @@ export default function GrappStoreProductPage() {
       )}
 
       <div className="px-3 md:px-5 pt-3">
-        <div className="text-[10px] font-semibold text-gl-brand mb-1">Sold by GrappStore</div>
+        <div className="text-[10px] font-semibold text-gl-navy mb-1">Sold by GrappStore</div>
         <h1 className="text-[15px] font-semibold text-gl-text mb-1.5">{product.name}</h1>
 
         <div className="flex items-center gap-3 mb-2">
@@ -150,14 +170,14 @@ export default function GrappStoreProductPage() {
         </div>
 
         <div className="flex items-center gap-2 mb-3">
-          <span className="text-[16px] font-bold text-gl-text">{formatGHS(product.priceGHS)}</span>
+          <span className="text-[22px] font-bold text-gl-text">{formatGHS(product.priceGHS)}</span>
           {product.originalPriceGHS && (
             <span className="text-[11px] text-gl-text-muted line-through">
               {formatGHS(product.originalPriceGHS)}
             </span>
           )}
           {product.discountPercent && (
-            <span className="text-[9px] font-semibold text-gl-brand-soft-text bg-gl-brand-soft-bg px-1.5 py-0.5 rounded">
+            <span className="text-[9px] font-semibold text-gl-red bg-gl-red/10 px-1.5 py-0.5 rounded">
               -{product.discountPercent}%
             </span>
           )}

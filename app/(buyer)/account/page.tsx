@@ -39,22 +39,45 @@ function QuickAction({
   label,
   onClick,
   href,
+  disabled,
 }: {
   icon: React.ReactNode;
   label: string;
   onClick?: () => void;
   href?: string;
+  disabled?: boolean;
 }) {
   const content = (
     <>
-      <div className="w-11 h-11 rounded-full bg-gl-bg-muted flex items-center justify-center">
+      <div
+        className={`w-11 h-11 rounded-full flex items-center justify-center ${
+          disabled ? "bg-gl-bg-muted/60" : "bg-gl-bg-muted"
+        }`}
+      >
         {icon}
       </div>
-      <span className="text-[9px] text-gl-text-secondary text-center leading-tight w-14">
+      <span
+        className={`text-[9px] text-center leading-tight w-14 ${
+          disabled ? "text-gl-text-muted" : "text-gl-text-secondary"
+        }`}
+      >
         {label}
+        {disabled && <span className="block text-[8px]">Soon</span>}
       </span>
     </>
   );
+
+  // Genuinely not-yet-built actions previously rendered identically to
+  // working ones — same press animation, same visual weight — so tapping
+  // them silently did nothing. This gives an honest "not live yet" signal
+  // instead of a dead button that looks functional.
+  if (disabled) {
+    return (
+      <div className="flex flex-col items-center gap-1.5 opacity-70" aria-disabled="true">
+        {content}
+      </div>
+    );
+  }
 
   if (href) {
     return (
@@ -165,25 +188,33 @@ export default function AccountPage() {
           label="My Orders"
           href="/account/orders"
         />
+        {/* Was missing an href entirely — the Wishlist stat above already
+            correctly links to /account/wishlist, so this one silently did
+            nothing while its twin worked. */}
         <QuickAction
           icon={<IconHeart size={18} className="text-gl-text-secondary" />}
           label="Wishlist"
+          href="/account/wishlist"
         />
         <QuickAction
           icon={<IconMapPin size={18} className="text-gl-text-secondary" />}
           label="Addresses"
+          disabled
         />
         <QuickAction
           icon={<IconTicket size={18} className="text-gl-text-secondary" />}
           label="Coupons"
+          disabled
         />
         <QuickAction
           icon={<IconUserPlus size={18} className="text-gl-text-secondary" />}
           label="Invite Friends"
+          disabled
         />
         <QuickAction
           icon={<IconHelpCircle size={18} className="text-gl-text-secondary" />}
           label="Help Center"
+          disabled
         />
         {hasSellRole ? (
           <QuickAction
@@ -228,6 +259,21 @@ export default function AccountPage() {
           </div>
         </>
       )}
+
+      {/* Footer-equivalent content — this is a bottom-tab-bar mobile app,
+          not a website, so a persistent site footer doesn't apply here.
+          Terms/Privacy were previously only reachable from signup, with no
+          way back to them once someone was past onboarding. */}
+      <div className="h-px bg-gl-border mx-3 md:mx-5 mb-3" />
+      <div className="flex items-center justify-center gap-3 px-3 md:px-5 pb-4 text-[9px] text-gl-text-muted">
+        <Link href="/legal/terms" className="active:opacity-60 transition-opacity">
+          Terms of Service
+        </Link>
+        <span>·</span>
+        <Link href="/legal/privacy" className="active:opacity-60 transition-opacity">
+          Privacy Policy
+        </Link>
+      </div>
 
       {showQrModal && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center px-6">

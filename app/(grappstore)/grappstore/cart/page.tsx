@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { IconArrowLeft, IconMinus, IconPlus, IconTrash } from "@tabler/icons-react";
 import { useGrappStoreCartStore } from "@/lib/store/useGrappStoreCartStore";
@@ -25,15 +24,27 @@ export default function GrappStoreCartPage() {
   return (
     <div className="px-3 md:px-5 pt-3.5 pb-36">
       <div className="flex items-center gap-2 mb-3">
-        <Link href="/grappstore" className="active:opacity-60 transition-opacity">
+        {/* Was a hardcoded Link back to /grappstore regardless of where the
+            person came from — the marketplace cart's back arrow uses
+            router.back() instead, so two "back" buttons in the same app
+            behaved differently. Matched to router.back() for consistency. */}
+        <button onClick={() => router.back()} className="active:opacity-60 transition-opacity" aria-label="Back">
           <IconArrowLeft size={18} className="text-gl-text" />
-        </Link>
+        </button>
         <h1 className="text-[14px] font-semibold text-gl-text">Your GrappStore cart</h1>
       </div>
 
       {rows.length === 0 ? (
-        <div className="py-10 text-center text-[11px] text-gl-text-secondary">
-          Your GrappStore cart is empty.
+        <div className="py-10 text-center">
+          <div className="text-[11px] text-gl-text-secondary mb-3">Your GrappStore cart is empty.</div>
+          {/* Was text-only — every other empty state in the app (marketplace
+              cart, GrappStore's own empty checkout) has a CTA to act on. */}
+          <button
+            onClick={() => router.push("/grappstore")}
+            className="inline-block bg-gl-brand text-white text-[11px] font-semibold px-4 py-2 rounded-lg active:opacity-80 transition-opacity"
+          >
+            Browse GrappStore
+          </button>
         </div>
       ) : (
         rows.map(({ item, product }) => (
@@ -44,19 +55,31 @@ export default function GrappStoreCartPage() {
               <div className="text-[11px] font-semibold text-gl-text mt-0.5">
                 {formatGHS(product?.priceGHS ?? 0)}
               </div>
+              {/* Quantity controls previously had aria-labels but no defined
+                  tap area at all (bare icons). Bumped to a real ~32px box —
+                  matched to the marketplace cart's equivalent buttons, which
+                  had a tap area but no aria-labels. Same pattern, both files. */}
               <div className="flex items-center gap-2 mt-1.5">
-                <div className="flex items-center gap-2 border border-gl-border-strong rounded-lg px-1.5 py-0.5">
-                  <button onClick={() => updateQuantity(item.productId, item.quantity - 1)} aria-label="Decrease quantity">
-                    <IconMinus size={12} className="text-gl-text" />
+                <div className="flex items-center gap-1.5 border border-gl-border-strong rounded-lg px-1 py-0.5">
+                  <button
+                    onClick={() => updateQuantity(item.productId, item.quantity - 1)}
+                    aria-label="Decrease quantity"
+                    className="w-8 h-8 rounded-full flex items-center justify-center active:bg-gl-bg-muted transition-colors"
+                  >
+                    <IconMinus size={14} className="text-gl-text" />
                   </button>
                   <span className="text-[10px] font-semibold text-gl-text w-3 text-center">{item.quantity}</span>
-                  <button onClick={() => updateQuantity(item.productId, item.quantity + 1)} aria-label="Increase quantity">
-                    <IconPlus size={12} className="text-gl-text" />
+                  <button
+                    onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+                    aria-label="Increase quantity"
+                    className="w-8 h-8 rounded-full flex items-center justify-center active:bg-gl-bg-muted transition-colors"
+                  >
+                    <IconPlus size={14} className="text-gl-text" />
                   </button>
                 </div>
                 <button
                   onClick={() => removeItem(item.productId)}
-                  className="text-gl-text-muted active:opacity-60 transition-opacity"
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-gl-text-muted active:bg-gl-bg-muted active:text-gl-red transition-colors"
                   aria-label="Remove item"
                 >
                   <IconTrash size={14} />

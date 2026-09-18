@@ -28,7 +28,7 @@ export default function CartPage() {
   return (
     <div className="pb-4">
       <div className="flex items-center gap-2 px-3 md:px-5 pt-3.5 pb-2">
-        <button onClick={() => router.back()} className="active:opacity-60 transition-opacity">
+        <button onClick={() => router.back()} className="active:opacity-60 transition-opacity" aria-label="Back">
           <IconArrowLeft size={16} className="text-gl-text" />
         </button>
         <h1 className="text-[14px] font-semibold text-gl-text">Cart</h1>
@@ -58,25 +58,32 @@ export default function CartPage() {
                   <div className="text-[11px] font-semibold text-gl-text mb-1.5">
                     {formatGHS(product.priceGHS)}
                   </div>
+                  {/* Bumped from w-6 h-6 to w-8 h-8 and added aria-labels —
+                      matched exactly to the GrappStore cart's equivalent
+                      buttons, which had labels but no real tap area. Same
+                      pattern now applies to both carts. */}
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => updateQuantity(product.id, quantity - 1)}
-                      className="w-6 h-6 rounded-full border border-gl-border-strong flex items-center justify-center active:bg-gl-bg-muted transition-colors"
+                      aria-label="Decrease quantity"
+                      className="w-8 h-8 rounded-full border border-gl-border-strong flex items-center justify-center active:bg-gl-bg-muted transition-colors"
                     >
-                      <IconMinus size={11} />
+                      <IconMinus size={14} />
                     </button>
                     <span className="text-[11px] text-gl-text w-4 text-center">{quantity}</span>
                     <button
                       onClick={() => updateQuantity(product.id, quantity + 1)}
-                      className="w-6 h-6 rounded-full border border-gl-border-strong flex items-center justify-center active:bg-gl-bg-muted transition-colors"
+                      aria-label="Increase quantity"
+                      className="w-8 h-8 rounded-full border border-gl-border-strong flex items-center justify-center active:bg-gl-bg-muted transition-colors"
                     >
-                      <IconPlus size={11} />
+                      <IconPlus size={14} />
                     </button>
                   </div>
                 </div>
                 <button
                   onClick={() => removeItem(product.id)}
-                  className="text-gl-text-muted active:text-gl-red transition-colors shrink-0"
+                  aria-label="Remove item"
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-gl-text-muted active:bg-gl-bg-muted active:text-gl-red transition-colors shrink-0"
                 >
                   <IconTrash size={15} />
                 </button>

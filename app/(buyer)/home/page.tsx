@@ -72,6 +72,26 @@ export default function HomePage() {
         </div>
       </div>
 
+      {/* GrappStore entry point — previously missing entirely from the
+          marketplace experience (no tab, no link on Home, Account, or
+          Categories). Everything GrappStore has, however polished,
+          was undiscoverable from the app a regular buyer actually uses.
+          Kept visually and conceptually distinct from GRAPP Verified
+          below — one is GRAPPlive's own first-party store, the other is
+          a seller-trust badge tier; AGENTS.md is explicit these must
+          never be conflated. */}
+      <Link
+        href="/grappstore"
+        className="mx-3 md:mx-5 mb-2.5 bg-gl-brand rounded-lg px-3 py-2.5 flex items-center justify-between relative overflow-hidden transition-transform active:scale-[0.98]"
+      >
+        <div className="absolute -top-4 -right-4 w-16 h-16 rounded-full bg-white/15" />
+        <div className="relative">
+          <div className="text-[12px] font-medium text-white">GrappStore</div>
+          <div className="text-[9px] text-white/80">GRAPPlive&apos;s own official store — genuine, guaranteed</div>
+        </div>
+        <IconChevronRight size={16} className="relative text-white/90" />
+      </Link>
+
       <Link
         href="/verified"
         className="mx-3 md:mx-5 mb-2.5 bg-[#0B0B0B] rounded-lg px-3 py-2.5 flex items-center justify-between relative overflow-hidden transition-transform active:scale-[0.98]"

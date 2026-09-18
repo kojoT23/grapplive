@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { IconChevronRight, IconBroadcast, IconUsers, IconWallet, IconCircleCheck } from "@tabler/icons-react";
+import { IconChevronRight, IconBroadcast, IconUsers, IconWallet, IconBuildingStore, IconCircleCheck } from "@tabler/icons-react";
 import { TabBar } from "@/components/ui/TabBar";
 import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
 import { useDashboardSummary } from "@/lib/hooks/useDashboardSummary";
@@ -83,19 +83,29 @@ export default function DashboardPage() {
         </div>
       </Link>
 
-      <div className="px-3 md:px-5 pb-3 flex gap-2">
+      {/* Storefront doesn't have a fixed bottom-tab slot — added here as a
+          third quick-link, same pattern as Customers/Payouts, rather than
+          restructuring the 5-item tab bar. */}
+      <div className="px-3 md:px-5 pb-3 grid grid-cols-3 gap-2">
+        <Link
+          href="/storefront"
+          className="bg-white border border-gl-border-strong rounded-lg py-2.5 text-[10px] font-semibold text-gl-text flex flex-col items-center justify-center gap-1 transition-colors active:bg-gl-bg-muted"
+        >
+          <IconBuildingStore size={16} />
+          Storefront
+        </Link>
         <Link
           href="/customers"
-          className="flex-1 bg-white border border-gl-border-strong rounded-lg py-2.5 text-[10px] font-semibold text-gl-text flex items-center justify-center gap-1.5 transition-colors active:bg-gl-bg-muted"
+          className="bg-white border border-gl-border-strong rounded-lg py-2.5 text-[10px] font-semibold text-gl-text flex flex-col items-center justify-center gap-1 transition-colors active:bg-gl-bg-muted"
         >
-          <IconUsers size={14} />
+          <IconUsers size={16} />
           Customers
         </Link>
         <Link
           href="/payouts"
-          className="flex-1 bg-white border border-gl-border-strong rounded-lg py-2.5 text-[10px] font-semibold text-gl-text flex items-center justify-center gap-1.5 transition-colors active:bg-gl-bg-muted"
+          className="bg-white border border-gl-border-strong rounded-lg py-2.5 text-[10px] font-semibold text-gl-text flex flex-col items-center justify-center gap-1 transition-colors active:bg-gl-bg-muted"
         >
-          <IconWallet size={14} />
+          <IconWallet size={16} />
           Payouts
         </Link>
       </div>

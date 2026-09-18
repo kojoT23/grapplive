@@ -1,15 +1,24 @@
+import Image from "next/image";
 import Link from "next/link";
-import { IconSearch, IconMessageCircle, IconShoppingCart, IconDots, IconPlayerPlayFilled, IconTruckDelivery, IconShieldCheck, IconRotateClockwise, IconPackage } from "@tabler/icons-react";
+import { IconSearch, IconMessageCircle, IconShoppingCart, IconDots, IconTruckDelivery, IconShieldCheck, IconRotateClockwise, IconPackage } from "@tabler/icons-react";
 import { ProductCard } from "@/components/ui/ProductCard";
 import { BannerCarousel } from "@/components/grappstore/BannerCarousel";
 import { DealsCountdown } from "@/components/grappstore/DealsCountdown";
+import { ShopTheLook } from "@/components/grappstore/ShopTheLook";
+import { VideoChannel } from "@/components/grappstore/VideoChannel";
+import { WatchAndShopCard } from "@/components/grappstore/WatchAndShopCard";
+import { RevealOnScroll } from "@/components/ui/RevealOnScroll";
+import { PeekScrollRow } from "@/components/ui/PeekScrollRow";
 import { officialCatalogProducts } from "@/lib/mock-data/officialCatalog";
+import { grappStoreLooks, getLookProducts } from "@/lib/mock-data/grappstoreLooks";
+import { productIllustrationByProductId } from "@/lib/mock-data/productIllustrations";
+import { productVideoClipByProductId } from "@/lib/mock-data/productVideoClips";
 
-const homeCategoryPreview: { label: string; slug: string }[] = [
-  { label: "Women", slug: "women" },
-  { label: "Men", slug: "men" },
-  { label: "Children", slug: "children" },
-  { label: "Accessories", slug: "accessories" },
+const homeCategoryPreview: { label: string; slug: string; image: string }[] = [
+  { label: "Women", slug: "women", image: "/categories/category-women.jpg" },
+  { label: "Men", slug: "men", image: "/categories/category-men.jpg" },
+  { label: "Children", slug: "children", image: "/categories/category-children.jpg" },
+  { label: "Accessories", slug: "accessories", image: "/categories/category-accessories.jpg" },
 ];
 
 const trustStats: { icon: typeof IconShieldCheck; value: string; label: string }[] = [
@@ -19,8 +28,28 @@ const trustStats: { icon: typeof IconShieldCheck; value: string; label: string }
   { icon: IconRotateClockwise, value: "7 days", label: "Easy returns" },
 ];
 
+const soldTodayByProductId: Record<string, number> = {
+  "gs-1": 8,
+  "gs-2": 15,
+  "gs-3": 21,
+  "gs-4": 6,
+  "gs-5": 4,
+  "gs-6": 11,
+  "gs-7": 9,
+};
+
 export default function GrappStoreHomePage() {
   const dealProducts = officialCatalogProducts.filter((p) => p.discountPercent != null);
+  const dealProductIds = new Set(dealProducts.map((p) => p.id));
+
+  const featuredLook = grappStoreLooks[0];
+  const featuredLookProductIds = new Set(
+    featuredLook ? getLookProducts(featuredLook).map((p) => p.id) : []
+  );
+
+  const discoverProducts = officialCatalogProducts.filter(
+    (p) => !dealProductIds.has(p.id) && !featuredLookProductIds.has(p.id)
+  );
   const videoProducts = officialCatalogProducts.filter((p) => p.videoSlideIndex != null);
 
   return (
@@ -30,10 +59,10 @@ export default function GrappStoreHomePage() {
           Grappstore
         </div>
         <div className="flex-1" />
-        <Link href="/grappstore/inbox" aria-label="Messages" className="active:opacity-60 transition-opacity">
+        <Link href="/grappstore/inbox" aria-label="Messages" className="transition-all duration-150 ease-out hover:scale-110 hover:text-gl-brand active:opacity-60">
           <IconMessageCircle size={20} className="text-gl-text-secondary" />
         </Link>
-        <Link href="/grappstore/cart" aria-label="Cart" className="active:opacity-60 transition-opacity">
+        <Link href="/grappstore/cart" aria-label="Cart" className="transition-all duration-150 ease-out hover:scale-110 hover:text-gl-brand active:opacity-60">
           <IconShoppingCart size={20} className="text-gl-text-secondary" />
         </Link>
       </div>
@@ -48,15 +77,12 @@ export default function GrappStoreHomePage() {
 
       <BannerCarousel />
 
-      {/* Trust-stat band — given its own quiet section with breathing room,
-          large numbers, a soft background and dividers, rather than being
-          squeezed into a tight row where it read as a footnote. */}
       <div className="mx-3 md:mx-5 mb-5 bg-gl-bg-muted rounded-lg py-4 grid grid-cols-4 divide-x divide-gl-border">
         {trustStats.map((stat) => {
           const Icon = stat.icon;
           return (
             <div key={stat.label} className="text-center px-1">
-              <Icon size={18} className="text-gl-brand mx-auto mb-1.5" />
+              <Icon size={18} className="text-gl-green mx-auto mb-1.5" />
               <div className="text-[15px] font-bold text-gl-text leading-tight tracking-tight">{stat.value}</div>
               <div className="text-[8.5px] text-gl-text-secondary leading-snug mt-0.5">{stat.label}</div>
             </div>
@@ -64,82 +90,101 @@ export default function GrappStoreHomePage() {
         })}
       </div>
 
-      <div className="flex items-center justify-between px-3 md:px-5 pb-2">
-        <h3 className="text-[13px] font-semibold text-gl-text">Shop by category</h3>
-        <Link href="/grappstore/categories" className="text-[10px] font-semibold text-gl-brand active:opacity-70 transition-opacity">
-          View all
-        </Link>
-      </div>
-      <div className="flex gap-3.5 md:gap-5 px-3 md:px-5 pb-3.5 overflow-x-auto">
-        {homeCategoryPreview.map((cat) => (
-          <Link
-            key={cat.slug}
-            href={`/grappstore/category/${cat.slug}`}
-            className="text-center text-[9px] text-gl-text-secondary shrink-0 transition-transform active:scale-90"
-          >
-            <div className="w-[46px] h-[46px] md:w-14 md:h-14 rounded-full mx-auto mb-1 overflow-hidden gl-shimmer" />
-            {cat.label}
+      <RevealOnScroll>
+        <div className="flex items-center justify-between px-3 md:px-5 pb-2">
+          <h3 className="text-[13px] font-semibold text-gl-text">Shop by category</h3>
+          <Link href="/grappstore/categories" className="text-[10px] font-semibold text-gl-brand active:opacity-70 transition-opacity">
+            View all
           </Link>
-        ))}
-        <Link
-          href="/grappstore/categories"
-          className="text-center text-[9px] text-gl-text-secondary shrink-0 transition-transform active:scale-90"
-        >
-          <div className="w-[46px] h-[46px] md:w-14 md:h-14 rounded-full mx-auto mb-1 bg-gl-bg-muted flex items-center justify-center">
-            <IconDots size={18} className="text-gl-text-secondary" />
-          </div>
-          More
-        </Link>
-      </div>
+        </div>
+        <div className="flex gap-3.5 md:gap-5 px-3 md:px-5 pb-3.5 overflow-x-auto">
+          {homeCategoryPreview.map((cat) => (
+            <Link
+              key={cat.slug}
+              href={`/grappstore/category/${cat.slug}`}
+              className="group text-center text-[9px] text-gl-text-secondary shrink-0 transition-transform active:scale-90"
+            >
+              <div className="w-[46px] h-[46px] md:w-14 md:h-14 rounded-full mx-auto mb-1 overflow-hidden relative ring-2 ring-transparent transition-all duration-200 ease-out group-hover:ring-gl-brand group-hover:scale-105">
+                <Image src={cat.image} alt={cat.label} fill sizes="56px" className="object-cover" />
+              </div>
+              {cat.label}
+            </Link>
+          ))}
+          <Link
+            href="/grappstore/categories"
+            className="group text-center text-[9px] text-gl-text-secondary shrink-0 transition-transform active:scale-90"
+          >
+            <div className="w-[46px] h-[46px] md:w-14 md:h-14 rounded-full mx-auto mb-1 bg-gl-bg-muted flex items-center justify-center transition-all duration-200 ease-out group-hover:scale-105 group-hover:bg-gl-border">
+              <IconDots size={18} className="text-gl-text-secondary" />
+            </div>
+            More
+          </Link>
+        </div>
+      </RevealOnScroll>
 
       {videoProducts.length > 0 && (
-        <>
+        <RevealOnScroll>
           <h3 className="px-3 md:px-5 pb-2 text-[13px] font-semibold text-gl-text">Watch &amp; shop</h3>
-          <div className="flex gap-2.5 px-3 md:px-5 pb-4 overflow-x-auto">
+          <PeekScrollRow>
             {videoProducts.map((product) => (
-              <Link
+              <WatchAndShopCard
                 key={product.id}
-                href={`/grappstore/product/${product.id}`}
-                className="w-[120px] shrink-0 transition-transform active:scale-95"
-              >
-                <div className="w-full h-[150px] rounded-lg gl-shimmer relative overflow-hidden mb-1.5">
-                  <span className="absolute top-1.5 left-1.5 bg-black/60 text-white text-[8px] font-semibold px-1.5 py-0.5 rounded">
-                    VIDEO
-                  </span>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-9 h-9 rounded-full bg-black/45 flex items-center justify-center">
-                      <IconPlayerPlayFilled size={14} className="text-white ml-0.5" />
-                    </div>
-                  </div>
-                </div>
-                <div className="text-[10px] text-gl-text leading-snug line-clamp-2 mb-0.5">{product.name}</div>
-                <div className="text-[10px] font-semibold text-gl-text">GHS {product.priceGHS}</div>
-              </Link>
+                product={product}
+                videoUrl={productVideoClipByProductId[product.id]}
+                posterSrc={productIllustrationByProductId[product.id]}
+              />
             ))}
-          </div>
-        </>
+          </PeekScrollRow>
+        </RevealOnScroll>
       )}
 
+      <RevealOnScroll>
+        <h3 className="px-3 md:px-5 pb-2 text-[13px] font-semibold text-gl-text">GrappStore TV</h3>
+        <VideoChannel />
+      </RevealOnScroll>
+
       {dealProducts.length > 0 && (
-        <>
-          <div className="flex items-center justify-between px-3 md:px-5 pb-2">
+        <RevealOnScroll>
+          <div id="deals-of-the-day" className="flex items-center justify-between px-3 md:px-5 pb-2 scroll-mt-4">
             <h3 className="text-[13px] font-semibold text-gl-text">Deals of the day</h3>
             <DealsCountdown />
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3 px-3 md:px-5 pb-4">
             {dealProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
+              <ProductCard
+                key={product.id}
+                product={product}
+                soldToday={soldTodayByProductId[product.id]}
+                imageSrc={productIllustrationByProductId[product.id]}
+                flipOnHover
+              />
             ))}
           </div>
-        </>
+        </RevealOnScroll>
       )}
 
-      <h3 className="px-3 md:px-5 pb-2 text-[13px] font-semibold text-gl-text">Discover &amp; shop</h3>
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3 px-3 md:px-5 pb-4">
-        {officialCatalogProducts.map((product) => (
-          <ProductCard key={product.id} product={product} />
-        ))}
-      </div>
+      {featuredLook && (
+        <RevealOnScroll>
+          <h3 className="px-3 md:px-5 pb-2 text-[13px] font-semibold text-gl-text">Shop the look</h3>
+          <ShopTheLook look={featuredLook} />
+        </RevealOnScroll>
+      )}
+
+      {discoverProducts.length > 0 && (
+        <RevealOnScroll>
+          <h3 className="px-3 md:px-5 pb-2 text-[13px] font-semibold text-gl-text">Discover &amp; shop</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3 px-3 md:px-5 pb-4">
+            {discoverProducts.map((product) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                soldToday={soldTodayByProductId[product.id]}
+                imageSrc={productIllustrationByProductId[product.id]}
+              />
+            ))}
+          </div>
+        </RevealOnScroll>
+      )}
     </div>
   );
 }

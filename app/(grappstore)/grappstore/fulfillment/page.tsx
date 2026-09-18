@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { IconArrowLeft } from "@tabler/icons-react";
+import { IconArrowLeft, IconPlus } from "@tabler/icons-react";
 import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
 import { useOrdersStore } from "@/lib/store/useOrdersStore";
 import { flattenGroups, groupTotal, type FlatOrderGroup, type OrderStatus } from "@/lib/mock-data/orders";
@@ -151,7 +151,16 @@ export default function GrappStoreFulfillmentPage() {
         <Link href="/grappstore/account" className="active:opacity-60 transition-opacity">
           <IconArrowLeft size={18} className="text-gl-text" />
         </Link>
-        <h1 className="text-[14px] font-semibold text-gl-text">GrappStore fulfillment</h1>
+        <h1 className="text-[14px] font-semibold text-gl-text flex-1">GrappStore fulfillment</h1>
+        {/* Entry point into the (currently mockup-only) product form —
+            products/new isn't linked from anywhere else yet. */}
+        <Link
+          href="/grappstore/products/new"
+          aria-label="Add product"
+          className="w-8 h-8 rounded-full bg-gl-bg-muted flex items-center justify-center transition-transform hover:scale-110 active:scale-90"
+        >
+          <IconPlus size={16} className="text-gl-text" />
+        </Link>
       </div>
       <p className="px-3 md:px-5 pb-2.5 text-[10px] text-gl-text-secondary">
         Internal ops view — GRAPPlive fulfills these directly, no seller confirmation needed.
