@@ -16,26 +16,27 @@ import { useGrappStoreCartStore } from "@/lib/store/useGrappStoreCartStore";
 import { useAuthGate } from "@/lib/hooks/useAuthGate";
 import type { CatalogProduct, VerifiedTier } from "@/lib/mock-data/catalog";
 
-type BadgeInfo = { label: string; icon: typeof IconShieldCheck; bgClass: string; textClass: string };
+type BadgeInfo = { label: string; icon: typeof IconShieldCheck; iconClass: string };
 
+// Neutral white pill + a colored icon, not a colored chip — one quiet
+// trust signal instead of a loud badge competing with the rest of the
+// card. Colors still map to the same meaning (green = verified, navy =
+// import, amber = top seller) but carried by the icon alone.
 const badgeConfig: Record<VerifiedTier, BadgeInfo> = {
   verified_producer: {
     label: "Verified",
     icon: IconShieldCheck,
-    bgClass: "bg-gl-green-soft-bg",
-    textClass: "text-gl-green-soft-text",
+    iconClass: "text-gl-green",
   },
   trusted_import: {
     label: "Import",
     icon: IconPackage,
-    bgClass: "bg-gl-navy/10",
-    textClass: "text-gl-navy",
+    iconClass: "text-gl-navy",
   },
   top_seller: {
     label: "Top seller",
     icon: IconStar,
-    bgClass: "bg-gl-amber-soft-bg",
-    textClass: "text-gl-amber-soft-text",
+    iconClass: "text-gl-amber",
   },
 };
 
@@ -77,9 +78,12 @@ export function ProductCard({ product, soldToday, imageSrc, flipOnHover }: Produ
   const badge = product.verifiedTier ? badgeConfig[product.verifiedTier] : null;
   const BadgeIcon = badge?.icon;
   const linkBase = product.sourceType === "grapplive" ? "/grappstore/product" : "/product";
+  // Unique per card so multiple cards on one page don't collide on the
+  // SVG pattern id.
+  const weaveId = `pc-weave-${product.id}`;
 
   const imageBlock = (
-    <div className={`h-[100px] md:h-[140px] relative overflow-hidden ${imageSrc ? "bg-white" : "gl-shimmer"}`}>
+    <div className={`h-[120px] md:h-[160px] relative overflow-hidden ${imageSrc ? "bg-white" : "gl-shimmer"}`}>
       {imageSrc ? (
         <Image
           src={imageSrc}
@@ -89,32 +93,38 @@ export function ProductCard({ product, soldToday, imageSrc, flipOnHover }: Produ
           className="object-cover transition-transform duration-400 ease-out group-hover:scale-110"
           unoptimized
         />
-      ) : null}
+      ) : (
+        // A quiet woven texture instead of a flat gray "loading" look —
+        // a placeholder that still reads as this store's aesthetic
+        // (ankara/kente-adjacent) rather than generic UI chrome.
+        <svg className="absolute inset-0 w-full h-full opacity-[0.06] pointer-events-none" preserveAspectRatio="none">
+          <defs>
+            <pattern id={weaveId} width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <line x1="0" y1="0" x2="0" y2="12" stroke="currentColor" strokeWidth="1.5" />
+              <line x1="6" y1="0" x2="6" y2="12" stroke="currentColor" strokeWidth="0.75" />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill={`url(#${weaveId})`} className="text-gl-text" />
+        </svg>
+      )}
       {badge && BadgeIcon ? (
-        <span
-          className={`absolute top-1.5 left-1.5 ${badge.bgClass} ${badge.textClass} text-[8px] font-semibold px-1.5 py-0.5 rounded-md flex items-center gap-0.5`}
-        >
-          <BadgeIcon size={9} />
+        <span className="absolute top-2 left-2 bg-white/95 text-gl-text text-[8px] font-semibold px-2 py-1 rounded-full flex items-center gap-1 shadow-sm">
+          <BadgeIcon size={9} className={badge.iconClass} />
           {badge.label}
         </span>
       ) : null}
-      {product.discountPercent ? (
-        <span className="absolute top-1.5 right-1.5 bg-gl-red text-white text-[8px] font-semibold px-1.5 py-0.5 rounded-md">
-          -{product.discountPercent}%
-        </span>
-      ) : null}
       {soldToday ? (
-        <span className="absolute bottom-1.5 left-1.5 bg-black/70 text-white text-[8px] font-medium px-1.5 py-0.5 rounded-md">
+        <span className="absolute bottom-2 left-2 bg-black/70 text-white text-[8px] font-medium px-1.5 py-0.5 rounded-md">
           {soldToday} sold today
         </span>
       ) : null}
       <button
         onClick={handleToggleWishlist}
-        className="absolute bottom-1.5 right-1.5 w-9 h-9 rounded-full bg-white/90 flex items-center justify-center transition-transform duration-150 ease-out hover:scale-110 active:scale-90"
+        className="absolute bottom-2 right-2 w-8 h-8 rounded-full bg-white/90 flex items-center justify-center transition-transform duration-150 ease-out hover:scale-110 active:scale-90"
         aria-label="Toggle wishlist"
       >
         <IconHeart
-          size={16}
+          size={15}
           className={isWishlisted ? "text-gl-brand fill-gl-brand" : "text-gl-text-secondary"}
         />
       </button>
@@ -122,8 +132,8 @@ export function ProductCard({ product, soldToday, imageSrc, flipOnHover }: Produ
   );
 
   const detailsBlock = (
-    <div className="px-2 py-2">
-      <div className="text-[11px] text-gl-text leading-snug line-clamp-2 mb-1 min-h-[28px]">
+    <div className="px-2.5 py-2.5">
+      <div className="text-[11.5px] text-gl-text leading-snug line-clamp-2 mb-1.5 min-h-[28px]">
         {product.name}
       </div>
 
@@ -139,10 +149,17 @@ export function ProductCard({ product, soldToday, imageSrc, flipOnHover }: Produ
 
       <div className="flex items-end justify-between gap-1">
         <div>
-          <div className="text-[14px] font-bold text-gl-text">GHS {product.priceGHS}</div>
+          <div className="text-[15px] font-bold text-gl-text tracking-tight">GHS {product.priceGHS}</div>
           {product.originalPriceGHS ? (
-            <div className="text-[9px] text-gl-text-muted line-through">
-              GHS {product.originalPriceGHS}
+            <div className="flex items-center gap-1.5">
+              <span className="text-[9px] text-gl-text-muted line-through">
+                GHS {product.originalPriceGHS}
+              </span>
+              {product.discountPercent ? (
+                <span className="text-[9px] font-semibold text-gl-green">
+                  Save {product.discountPercent}%
+                </span>
+              ) : null}
             </div>
           ) : null}
         </div>
@@ -161,7 +178,7 @@ export function ProductCard({ product, soldToday, imageSrc, flipOnHover }: Produ
     return (
       <Link
         href={`${linkBase}/${product.id}`}
-        className="group block [perspective:1000px] h-[215px]"
+        className="group block [perspective:1000px] h-[230px]"
       >
         <div className="relative w-full h-full transition-transform duration-500 ease-out [transform-style:preserve-3d] group-hover:[transform:rotateY(180deg)]">
           <div className="absolute inset-0 bg-white rounded-lg overflow-hidden border border-gl-border [backface-visibility:hidden]">
@@ -212,3 +229,4 @@ export function ProductCard({ product, soldToday, imageSrc, flipOnHover }: Produ
     </Link>
   );
 }
+

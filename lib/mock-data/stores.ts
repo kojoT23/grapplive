@@ -1,3 +1,10 @@
+export type StoreSocials = {
+  whatsappNumber?: string;
+  instagramHandle?: string;
+  tiktokHandle?: string;
+  facebookHandle?: string;
+};
+
 export type Store = {
   sellerId: string;
   about: string;
@@ -7,6 +14,7 @@ export type Store = {
   reviewCount: number;
   responseRate: string;
   memberSince: string;
+  socials?: StoreSocials;
 };
 
 export const stores: Record<string, Store> = {
@@ -19,6 +27,16 @@ export const stores: Record<string, Store> = {
     reviewCount: 312,
     responseRate: "96%",
     memberSince: "2022",
+    // Same handles already on this seller's catalog products
+    // (sellerSocials on each CatalogProduct) — pulled up to the store
+    // level here as the real source of truth for store-wide editing.
+    // The per-product duplication in catalog.ts is a known redundancy,
+    // not fixed in this pass.
+    socials: {
+      whatsappNumber: "233241234567",
+      instagramHandle: "amasfashionhouse",
+      tiktokHandle: "amasfashionhouse",
+    },
   },
   s2: {
     sellerId: "s2",
@@ -29,6 +47,11 @@ export const stores: Record<string, Store> = {
     reviewCount: 148,
     responseRate: "89%",
     memberSince: "2023",
+    socials: {
+      whatsappNumber: "233201234567",
+      instagramHandle: "kojoelectronics",
+      tiktokHandle: "kojoelectronics",
+    },
   },
   s3: {
     sellerId: "s3",
@@ -39,9 +62,13 @@ export const stores: Record<string, Store> = {
     reviewCount: 96,
     responseRate: "98%",
     memberSince: "2021",
+    socials: {
+      whatsappNumber: "233271234567",
+    },
   },
 };
 
 export function getStoreBySellerId(sellerId: string): Store | undefined {
   return stores[sellerId];
 }
+

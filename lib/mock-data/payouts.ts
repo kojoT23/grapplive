@@ -13,6 +13,7 @@ export type MomoDetails = {
   pendingChange: {
     hoursRemaining: number;
     minutesRemaining: number;
+    newNumberMasked?: string; // the incoming number, shown during cooling-off
   } | null;
 };
 
@@ -32,3 +33,4 @@ export const payoutHistory: PayoutRecord[] = [
   { id: "po2", amountGHS: 89, detail: "1 order · 21 Aug", status: "pending_release" },
   { id: "po3", amountGHS: 65, detail: "Direct MoMo · settled directly", status: "direct_momo_untracked" },
 ];
+

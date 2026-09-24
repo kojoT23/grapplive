@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import {
   IconArrowLeft,
   IconRosetteDiscountCheck,
-  IconVideo,
+  IconMessageCircle2,
   IconBrandWhatsapp,
   IconBrandTiktok,
   IconBrandInstagram,
@@ -22,6 +22,7 @@ import { useAuthGate } from "@/lib/hooks/useAuthGate";
 import { getProductById } from "@/lib/mock-data/catalog";
 import { useCartStore } from "@/lib/store/useCartStore";
 import { ProductReviews } from "@/components/ui/ProductReviews";
+import { BuyerRequestSheet } from "@/components/ui/BuyerRequestSheet";
 
 function isLightColor(hex: string) {
   const c = hex.replace("#", "");
@@ -36,7 +37,8 @@ export default function ProductPage() {
   const params = useParams<{ id: string }>();
   const addToCart = useCartStore((s) => s.addItem);
   const requireAuth = useAuthGate();
-  const [showCallPicker, setShowCallPicker] = useState(false);
+  const [showContactSheet, setShowContactSheet] = useState(false);
+  const [showAskSheet, setShowAskSheet] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [activeImage, setActiveImage] = useState(0);
   const [selectedColorIndex, setSelectedColorIndex] = useState(0);
@@ -66,8 +68,6 @@ export default function ProductPage() {
       addToCart(product.id, quantity);
       router.push("/checkout");
     });
-
-  const handleVideoCallRequest = () => requireAuth(() => setShowCallPicker(true));
 
   const decreaseQuantity = () => setQuantity((q) => Math.max(1, q - 1));
   const increaseQuantity = () => setQuantity((q) => q + 1);
@@ -165,6 +165,13 @@ export default function ProductPage() {
           )}
         </div>
 
+        {product.returnPolicyDays ? (
+          <div className="flex items-center gap-1 text-[10px] text-gl-text-secondary mb-2.5">
+            <IconShieldCheck size={12} className="text-gl-green" />
+            {product.returnPolicyDays}-day returns
+          </div>
+        ) : null}
+
         {product.colorVariants && product.colorVariants.length > 0 && (
           <div className="mb-3">
             <div className="text-[11px] text-gl-text-secondary mb-1.5">
@@ -211,73 +218,12 @@ export default function ProductPage() {
         </Link>
 
         <button
-          onClick={handleVideoCallRequest}
-          disabled={!hasAnyCallOption}
-          className="w-full bg-white text-gl-text border border-[#2C2C2A] rounded-lg py-2.5 text-[12px] font-semibold mb-2 flex items-center justify-center gap-1.5 active:bg-gl-bg-muted transition-colors disabled:opacity-40"
+          onClick={() => setShowContactSheet(true)}
+          className="w-full bg-gl-brand text-white rounded-lg py-2.5 text-[12px] font-semibold mb-2.5 flex items-center justify-center gap-1.5 active:opacity-80 transition-opacity"
         >
-          <IconVideo size={13} />
-          Request video call before you buy
+          <IconMessageCircle2 size={13} />
+          Contact seller
         </button>
-
-        {hasAnySocial && (
-          <div className="flex gap-1.5 mb-2.5 flex-wrap">
-            {whatsappNumber ? (
-              <Link
-                href={whatsappUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 min-w-[60px] text-center border border-gl-bg-placeholder rounded-md py-1.5 text-[9px] text-gl-text-secondary active:bg-gl-bg-muted transition-colors"
-              >
-                <IconBrandWhatsapp size={14} className="mx-auto mb-0.5" />
-                WhatsApp
-              </Link>
-            ) : null}
-            {signalNumber ? (
-              <Link
-                href={signalUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 min-w-[60px] text-center border border-gl-bg-placeholder rounded-md py-1.5 text-[9px] text-gl-text-secondary active:bg-gl-bg-muted transition-colors"
-              >
-                <IconShieldCheck size={14} className="mx-auto mb-0.5" />
-                Signal
-              </Link>
-            ) : null}
-            {telegramHandle ? (
-              <Link
-                href={telegramUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 min-w-[60px] text-center border border-gl-bg-placeholder rounded-md py-1.5 text-[9px] text-gl-text-secondary active:bg-gl-bg-muted transition-colors"
-              >
-                <IconBrandTelegram size={14} className="mx-auto mb-0.5" />
-                Telegram
-              </Link>
-            ) : null}
-            {tiktokHandle ? (
-              <Link
-                href={tiktokUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 min-w-[60px] text-center border border-gl-bg-placeholder rounded-md py-1.5 text-[9px] text-gl-text-secondary active:bg-gl-bg-muted transition-colors"
-              >
-                <IconBrandTiktok size={14} className="mx-auto mb-0.5" />
-                TikTok
-              </Link>
-            ) : null}
-            {instagramHandle ? (
-              <Link
-                href={instagramUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 min-w-[60px] text-center border border-gl-bg-placeholder rounded-md py-1.5 text-[9px] text-gl-text-secondary active:bg-gl-bg-muted transition-colors"
-              >
-                <IconBrandInstagram size={14} className="mx-auto mb-0.5" />
-                Instagram
-              </Link>
-            ) : null}
-          </div>
-        )}
 
         <div className="flex items-center justify-between border border-gl-border rounded-lg px-3 py-2.5 mb-2.5">
           <span className="text-[11px] font-semibold text-gl-text">Quantity</span>
@@ -319,102 +265,131 @@ export default function ProductPage() {
         </button>
       </div>
 
-      {showCallPicker && (
+      {showContactSheet && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-end md:items-center justify-center">
           <div className="w-full max-w-[480px] md:max-w-[380px] bg-white rounded-t-2xl md:rounded-2xl p-5 pb-6">
             <div className="flex items-center justify-between mb-1">
-              <h2 className="text-[14px] font-semibold text-gl-text">Request a video call</h2>
-              <button onClick={() => setShowCallPicker(false)} className="active:opacity-60 transition-opacity">
+              <h2 className="text-[14px] font-semibold text-gl-text">Contact seller</h2>
+              <button onClick={() => setShowContactSheet(false)} className="active:opacity-60 transition-opacity">
                 <IconX size={16} className="text-gl-text-secondary" />
               </button>
             </div>
             <p className="text-[11px] text-gl-text-secondary mb-4">
-              Choose how you&apos;d like to reach {product.sellerName}. Video calls happen inside
-              that app, not in GRAPPlive.
+              Reach out to {product.sellerName} about {product.name}.
             </p>
 
-            {whatsappNumber ? (
-              <Link
-                href={whatsappCallUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => setShowCallPicker(false)}
-                className="w-full flex items-center gap-2.5 border border-gl-border rounded-lg p-3 mb-2 active:bg-gl-bg-muted transition-colors"
-              >
-                <IconBrandWhatsapp size={18} className="text-gl-green" />
-                <div className="text-left">
-                  <div className="text-[12px] font-semibold text-gl-text">WhatsApp</div>
-                  <div className="text-[9px] text-gl-text-secondary">Opens a chat with your request pre-filled</div>
-                </div>
-              </Link>
-            ) : null}
+            <button
+              onClick={() => {
+                setShowContactSheet(false);
+                setShowAskSheet(true);
+              }}
+              className="w-full flex items-center gap-2.5 border border-gl-border rounded-lg p-3 mb-2 active:bg-gl-bg-muted transition-colors"
+            >
+              <IconMessageCircle2 size={18} className="text-gl-brand" />
+              <div className="text-left">
+                <div className="text-[12px] font-semibold text-gl-text">Ask a question</div>
+                <div className="text-[9px] text-gl-text-secondary">Send a message inside GRAPPlive</div>
+              </div>
+            </button>
 
-            {signalNumber ? (
-              <Link
-                href={signalUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => setShowCallPicker(false)}
-                className="w-full flex items-center gap-2.5 border border-gl-border rounded-lg p-3 mb-2 active:bg-gl-bg-muted transition-colors"
-              >
-                <IconShieldCheck size={18} className="text-gl-navy" />
-                <div className="text-left">
-                  <div className="text-[12px] font-semibold text-gl-text">Signal</div>
-                  <div className="text-[9px] text-gl-text-secondary">Opens a chat — start the call there</div>
+            {hasAnyCallOption && (
+              <>
+                <div className="text-[10px] font-semibold text-gl-text-secondary mt-3 mb-2">
+                  Or request a video call
                 </div>
-              </Link>
-            ) : null}
 
-            {telegramHandle ? (
-              <Link
-                href={telegramUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => setShowCallPicker(false)}
-                className="w-full flex items-center gap-2.5 border border-gl-border rounded-lg p-3 mb-2 active:bg-gl-bg-muted transition-colors"
-              >
-                <IconBrandTelegram size={18} className="text-[#229ED9]" />
-                <div className="text-left">
-                  <div className="text-[12px] font-semibold text-gl-text">Telegram</div>
-                  <div className="text-[9px] text-gl-text-secondary">Opens a chat — start the call there</div>
-                </div>
-              </Link>
-            ) : null}
+                {whatsappNumber ? (
+                  <Link
+                    href={whatsappCallUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setShowContactSheet(false)}
+                    className="w-full flex items-center gap-2.5 border border-gl-border rounded-lg p-3 mb-2 active:bg-gl-bg-muted transition-colors"
+                  >
+                    <IconBrandWhatsapp size={18} className="text-gl-green" />
+                    <div className="text-left">
+                      <div className="text-[12px] font-semibold text-gl-text">WhatsApp</div>
+                      <div className="text-[9px] text-gl-text-secondary">Opens a chat with your request pre-filled</div>
+                    </div>
+                  </Link>
+                ) : null}
 
-            {tiktokHandle ? (
-              <Link
-                href={tiktokUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => setShowCallPicker(false)}
-                className="w-full flex items-center gap-2.5 border border-gl-border rounded-lg p-3 mb-2 active:bg-gl-bg-muted transition-colors"
-              >
-                <IconBrandTiktok size={18} className="text-gl-text" />
-                <div className="text-left">
-                  <div className="text-[12px] font-semibold text-gl-text">TikTok</div>
-                  <div className="text-[9px] text-gl-text-secondary">Opens their profile — message them there</div>
-                </div>
-              </Link>
-            ) : null}
+                {signalNumber ? (
+                  <Link
+                    href={signalUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setShowContactSheet(false)}
+                    className="w-full flex items-center gap-2.5 border border-gl-border rounded-lg p-3 mb-2 active:bg-gl-bg-muted transition-colors"
+                  >
+                    <IconShieldCheck size={18} className="text-gl-navy" />
+                    <div className="text-left">
+                      <div className="text-[12px] font-semibold text-gl-text">Signal</div>
+                      <div className="text-[9px] text-gl-text-secondary">Opens a chat — start the call there</div>
+                    </div>
+                  </Link>
+                ) : null}
 
-            {instagramHandle ? (
-              <Link
-                href={instagramUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => setShowCallPicker(false)}
-                className="w-full flex items-center gap-2.5 border border-gl-border rounded-lg p-3 active:bg-gl-bg-muted transition-colors"
-              >
-                <IconBrandInstagram size={18} className="text-gl-brand" />
-                <div className="text-left">
-                  <div className="text-[12px] font-semibold text-gl-text">Instagram</div>
-                  <div className="text-[9px] text-gl-text-secondary">Opens their profile — message them there</div>
-                </div>
-              </Link>
-            ) : null}
+                {telegramHandle ? (
+                  <Link
+                    href={telegramUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setShowContactSheet(false)}
+                    className="w-full flex items-center gap-2.5 border border-gl-border rounded-lg p-3 mb-2 active:bg-gl-bg-muted transition-colors"
+                  >
+                    <IconBrandTelegram size={18} className="text-[#229ED9]" />
+                    <div className="text-left">
+                      <div className="text-[12px] font-semibold text-gl-text">Telegram</div>
+                      <div className="text-[9px] text-gl-text-secondary">Opens a chat — start the call there</div>
+                    </div>
+                  </Link>
+                ) : null}
+
+                {tiktokHandle ? (
+                  <Link
+                    href={tiktokUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setShowContactSheet(false)}
+                    className="w-full flex items-center gap-2.5 border border-gl-border rounded-lg p-3 mb-2 active:bg-gl-bg-muted transition-colors"
+                  >
+                    <IconBrandTiktok size={18} className="text-gl-text" />
+                    <div className="text-left">
+                      <div className="text-[12px] font-semibold text-gl-text">TikTok</div>
+                      <div className="text-[9px] text-gl-text-secondary">Opens their profile — message them there</div>
+                    </div>
+                  </Link>
+                ) : null}
+
+                {instagramHandle ? (
+                  <Link
+                    href={instagramUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setShowContactSheet(false)}
+                    className="w-full flex items-center gap-2.5 border border-gl-border rounded-lg p-3 active:bg-gl-bg-muted transition-colors"
+                  >
+                    <IconBrandInstagram size={18} className="text-gl-brand" />
+                    <div className="text-left">
+                      <div className="text-[12px] font-semibold text-gl-text">Instagram</div>
+                      <div className="text-[9px] text-gl-text-secondary">Opens their profile — message them there</div>
+                    </div>
+                  </Link>
+                ) : null}
+              </>
+            )}
           </div>
         </div>
       )}
+
+      <BuyerRequestSheet
+        isOpen={showAskSheet}
+        onClose={() => setShowAskSheet(false)}
+        productId={product.id}
+        productName={product.name}
+        sellerId={product.sellerId}
+      />
     </div>
   );
 }

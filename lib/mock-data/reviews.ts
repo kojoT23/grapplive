@@ -124,3 +124,91 @@ export function getReviewsByProductId(productId: string): Review[] {
 export function getRatingBreakdown(productId: string): RatingBreakdown | undefined {
   return ratingBreakdowns[productId];
 }
+
+// --- Seller storefront reviews (added for the /storefront Reviews tab) ---
+// Deliberately a separate, simpler shape (ProductReview) from the
+// GrappStore Review type above, not a replacement for it — the two power
+// different UI (GrappStore's per-product rating-breakdown component vs.
+// the seller dashboard's aggregated cross-product reviews tab). Kept in
+// this same file since both are "reviews fixture data," but the export
+// names are intentionally distinct to avoid ever colliding again.
+export type ProductReview = {
+  id: string;
+  productId: string;
+  reviewerName: string;
+  rating: number;
+  timeAgo: string;
+  comment: string;
+};
+
+// A representative sample, not the full review count shown on the
+// product/store cards (e.g. 312 is the real total; this is a curated set
+// standing in for "top reviews," the way any real platform shows a
+// subset rather than every review ever left).
+export const productReviews: ProductReview[] = [
+  {
+    id: "spr1",
+    productId: "p1",
+    reviewerName: "Efua D.",
+    rating: 5,
+    timeAgo: "3 days ago",
+    comment: "The print is even nicer in person and the fit was true to size. Got so many compliments wearing this to church.",
+  },
+  {
+    id: "spr2",
+    productId: "p1",
+    reviewerName: "Nana Y.",
+    rating: 5,
+    timeAgo: "1 week ago",
+    comment: "Fast delivery to Kumasi and the fabric quality is solid, not thin like some ankara pieces I've bought before.",
+  },
+  {
+    id: "spr3",
+    productId: "p1",
+    reviewerName: "Abena K.",
+    rating: 4,
+    timeAgo: "2 weeks ago",
+    comment: "Lovely dress. Runs a touch small in the shoulders so I'd size up if you're between sizes.",
+  },
+  {
+    id: "spr4",
+    productId: "p4",
+    reviewerName: "Adjoa M.",
+    rating: 5,
+    timeAgo: "5 days ago",
+    comment: "Comfortable enough to wear all day and the pockets are a nice touch. Will be ordering another color.",
+  },
+  {
+    id: "spr5",
+    productId: "p4",
+    reviewerName: "Yaa B.",
+    rating: 4,
+    timeAgo: "3 weeks ago",
+    comment: "Good quality jumpsuit, the waist fit is flattering. Delivery took a bit longer than the estimate though.",
+  },
+  {
+    id: "spr6",
+    productId: "p5",
+    reviewerName: "Akosua T.",
+    rating: 5,
+    timeAgo: "1 week ago",
+    comment: "Ordered this for a wedding and Ama got my measurements exactly right. The finishing is beautiful.",
+  },
+  {
+    id: "spr7",
+    productId: "p6",
+    reviewerName: "Esi F.",
+    rating: 4,
+    timeAgo: "4 days ago",
+    comment: "Good size and the fabric holds a wrap well without slipping. Would buy in another print.",
+  },
+];
+
+// Aggregates a seller's reviews across all of their products. Newest-first
+// isn't computable from "timeAgo" strings alone (fixture data, no real
+// dates), so this returns them in listed order.
+export function getReviewsForProducts(productIds: string[]): ProductReview[] {
+  const idSet = new Set(productIds);
+  return productReviews.filter((r) => idSet.has(r.productId));
+}
+

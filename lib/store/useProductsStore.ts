@@ -10,10 +10,17 @@ export type NewProductInput = {
   isResellerItem?: boolean;
   resellerMarkupGHS?: number;
   draftNote?: string;
+  unitsSold?: number;
+  originalPriceGHS?: number;
+  discountPercent?: number;
+  ratingAvg?: number;
+  reviewCount?: number;
 };
 
 type ProductsState = {
   products: SellerProduct[];
+  hasHydrated: boolean;
+  setHasHydrated: (value: boolean) => void;
   addProduct: (input: NewProductInput) => string;
   updateProduct: (id: string, input: NewProductInput) => void;
   deleteProduct: (id: string) => void;
@@ -34,6 +41,8 @@ export const useProductsStore = create<ProductsState>()(
   persist(
     (set, get) => ({
       products: initialProducts,
+      hasHydrated: false,
+      setHasHydrated: (value) => set({ hasHydrated: value }),
 
       addProduct: (input) => {
         const id = nextProductId(get().products);
@@ -50,6 +59,12 @@ export const useProductsStore = create<ProductsState>()(
       deleteProduct: (id) =>
         set((state) => ({ products: state.products.filter((p) => p.id !== id) })),
     }),
-    { name: "grapplelive-products" }
+    {
+      name: "grapplelive-products",
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
+    }
   )
 );
+

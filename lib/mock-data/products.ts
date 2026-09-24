@@ -9,6 +9,11 @@ export type SellerProduct = {
   isResellerItem?: boolean;
   resellerMarkupGHS?: number;
   draftNote?: string; // e.g. "Needs 2 more photos"
+  unitsSold?: number; // fixture metric for Best Selling ranking — no real sales pipeline yet
+  originalPriceGHS?: number; // set alongside discountPercent to show a strike-through price
+  discountPercent?: number;
+  ratingAvg?: number; // fixture — no real reviews pipeline feeding this yet
+  reviewCount?: number;
 };
 
 export const initialProducts: SellerProduct[] = [
@@ -18,6 +23,11 @@ export const initialProducts: SellerProduct[] = [
     priceGHS: 89,
     stock: 14,
     status: "live",
+    unitsSold: 34,
+    originalPriceGHS: 105,
+    discountPercent: 15,
+    ratingAvg: 4.7,
+    reviewCount: 89,
   },
   {
     id: "p2",
@@ -27,6 +37,9 @@ export const initialProducts: SellerProduct[] = [
     status: "live",
     isResellerItem: true,
     resellerMarkupGHS: 20,
+    unitsSold: 51,
+    ratingAvg: 4.8,
+    reviewCount: 56,
   },
   {
     id: "p3",
@@ -37,3 +50,4 @@ export const initialProducts: SellerProduct[] = [
     draftNote: "Needs 2 more photos",
   },
 ];
+
