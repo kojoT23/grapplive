@@ -3,6 +3,7 @@ import { IconArrowLeft, IconMapPin, IconStar, IconBrandWhatsapp } from "@tabler/
 import { ProductCard } from "@/components/ui/ProductCard";
 import { getSellerById } from "@/lib/mock-data/sellers";
 import { SellerFollowButton } from "./SellerFollowButton";
+import { SellerLiveBanner } from "./SellerLiveBanner";
 
 export default async function SellerProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -42,6 +43,8 @@ export default async function SellerProfilePage({ params }: { params: Promise<{ 
           </div>
         </div>
       </div>
+
+      <SellerLiveBanner sellerId={seller.id} />
 
       {store && (
         <div className="px-3 md:px-5 pb-3">

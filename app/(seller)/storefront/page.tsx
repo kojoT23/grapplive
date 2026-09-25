@@ -25,6 +25,7 @@ import {
   IconEyeOff,
   IconCheck,
   IconTools,
+  IconBroadcast,
 } from "@tabler/icons-react";
 import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
 import { useBuyerRequestsStore, type BuyerRequest } from "@/lib/store/useBuyerRequestsStore";
@@ -407,6 +408,14 @@ export default function SellerStorefrontPage() {
             Seller tools — not visible to buyers
           </span>
         </div>
+
+        <Link
+          href="/storefront/go-live"
+          className="flex items-center justify-center gap-1.5 w-full bg-gl-brand text-white text-[11px] font-semibold py-2.5 rounded-lg mb-3 active:opacity-80 transition-opacity"
+        >
+          <IconBroadcast size={14} />
+          Schedule a live session
+        </Link>
 
         <div className="grid grid-cols-3 gap-2 mb-3">
           <div className="bg-white rounded-lg py-2.5 text-center">
