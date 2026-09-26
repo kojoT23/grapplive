@@ -23,9 +23,21 @@ export default async function SellerProfilePage({ params }: { params: Promise<{ 
   const { store } = seller;
   const whatsappNumber = seller.products[0]?.sellerSocials.whatsappNumber;
 
+  const bannerWeaveId = `seller-banner-weave-${seller.id}`;
+  const avatarWeaveId = `seller-avatar-weave-${seller.id}`;
+
   return (
     <div className="pb-6">
-      <div className="relative w-full h-28 gl-shimmer">
+      <div className="relative w-full h-28 gl-shimmer overflow-hidden">
+        <svg className="absolute inset-0 w-full h-full opacity-[0.07] pointer-events-none" preserveAspectRatio="none">
+          <defs>
+            <pattern id={bannerWeaveId} width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <line x1="0" y1="0" x2="0" y2="14" stroke="currentColor" strokeWidth="1.5" />
+              <line x1="7" y1="0" x2="7" y2="14" stroke="currentColor" strokeWidth="0.75" />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill={`url(#${bannerWeaveId})`} className="text-gl-text" />
+        </svg>
         <Link
           href="/home"
           className="absolute top-3 left-3 z-10 bg-black/30 rounded-full p-1.5 active:opacity-60 transition-opacity"
@@ -35,7 +47,17 @@ export default async function SellerProfilePage({ params }: { params: Promise<{ 
       </div>
 
       <div className="px-3 md:px-5 flex items-end gap-3 -mt-8 pb-3">
-        <div className="w-16 h-16 rounded-full shrink-0 overflow-hidden gl-shimmer border-2 border-white bg-gl-bg" />
+        <div className="w-16 h-16 rounded-full shrink-0 overflow-hidden gl-shimmer border-2 border-white bg-gl-bg relative">
+          <svg className="absolute inset-0 w-full h-full opacity-[0.1] pointer-events-none" preserveAspectRatio="none">
+            <defs>
+              <pattern id={avatarWeaveId} width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+                <line x1="0" y1="0" x2="0" y2="10" stroke="currentColor" strokeWidth="1.5" />
+                <line x1="5" y1="0" x2="5" y2="10" stroke="currentColor" strokeWidth="0.75" />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill={`url(#${avatarWeaveId})`} className="text-gl-text" />
+          </svg>
+        </div>
         <div className="flex-1 pb-1">
           <div className="text-[15px] font-semibold text-gl-text">{seller.name}</div>
           <div className="text-[10px] text-gl-text-secondary">

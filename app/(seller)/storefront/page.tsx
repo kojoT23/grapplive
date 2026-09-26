@@ -329,7 +329,17 @@ export default function SellerStorefrontPage() {
             // eslint-disable-next-line @next/next/no-img-element
             <img src={displayBanner} alt="" className="w-full h-full object-cover" />
           ) : (
-            <div className="w-full h-full gl-shimmer" />
+            <div className="w-full h-full gl-shimmer relative overflow-hidden">
+              <svg className="absolute inset-0 w-full h-full opacity-[0.07] pointer-events-none" preserveAspectRatio="none">
+                <defs>
+                  <pattern id="storefront-banner-weave" width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+                    <line x1="0" y1="0" x2="0" y2="14" stroke="currentColor" strokeWidth="1.5" />
+                    <line x1="7" y1="0" x2="7" y2="14" stroke="currentColor" strokeWidth="0.75" />
+                  </pattern>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#storefront-banner-weave)" className="text-gl-text" />
+              </svg>
+            </div>
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/35 to-transparent" />
         </div>

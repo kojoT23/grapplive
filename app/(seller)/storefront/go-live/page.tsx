@@ -49,8 +49,13 @@ export default function GoLivePage() {
   const clearSession = useLiveSessionStore((s) => s.clearSession);
   const sessionHasHydrated = useLiveSessionStore((s) => s.hasHydrated);
 
-  const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
+  const now = new Date();
+  const [day, setDay] = useState("");
+  const [month, setMonth] = useState("");
+  const [year, setYear] = useState(String(now.getFullYear()));
+  const [hour, setHour] = useState("");
+  const [minute, setMinute] = useState("");
+  const [period, setPeriod] = useState<"AM" | "PM">("AM");
   const [productId, setProductId] = useState<string | null>(null);
   const [platform, setPlatform] = useState<Platform | null>(null);
   const [showProductPicker, setShowProductPicker] = useState(false);
@@ -86,10 +91,15 @@ export default function GoLivePage() {
     key === "tiktok" ? socials.tiktokHandle : key === "instagram" ? socials.instagramHandle : socials.facebookHandle;
 
   const handleSchedule = () => {
-    if (!date || !time) {
+    if (!day || !month || !year || !hour || !minute) {
       setError("Pick a date and time for your session.");
       return;
     }
+    const date = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+    let hour24 = parseInt(hour, 10) % 12;
+    if (period === "PM") hour24 += 12;
+    const time = `${String(hour24).padStart(2, "0")}:${minute}`;
+
     if (!productId) {
       setError("Choose a product to pin to this session.");
       return;
@@ -119,8 +129,12 @@ export default function GoLivePage() {
   const handleCancelScheduled = () => {
     clearSession();
     setScheduled(null);
-    setDate("");
-    setTime("");
+    setDay("");
+    setMonth("");
+    setYear(String(now.getFullYear()));
+    setHour("");
+    setMinute("");
+    setPeriod("AM");
     setProductId(null);
     setPlatform(null);
   };
@@ -222,12 +236,53 @@ export default function GoLivePage() {
         <label className="text-[11px] font-semibold text-gl-text mb-1.5 block">Date</label>
         <div className="flex items-center gap-2 border border-gl-border rounded-lg px-3 py-2.5">
           <IconCalendarEvent size={14} className="text-gl-text-secondary shrink-0" />
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="w-full text-[12px] text-gl-text bg-transparent outline-none"
-          />
+          <select
+            value={month}
+            onChange={(e) => {
+              setMonth(e.target.value);
+              if (error) setError(null);
+            }}
+            className="text-[12px] text-gl-text bg-transparent outline-none flex-1"
+          >
+            <option value="">Month</option>
+            {[
+              "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+              "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+            ].map((label, i) => (
+              <option key={label} value={String(i + 1)}>
+                {label}
+              </option>
+            ))}
+          </select>
+          <select
+            value={day}
+            onChange={(e) => {
+              setDay(e.target.value);
+              if (error) setError(null);
+            }}
+            className="text-[12px] text-gl-text bg-transparent outline-none w-14"
+          >
+            <option value="">Day</option>
+            {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+              <option key={d} value={String(d)}>
+                {d}
+              </option>
+            ))}
+          </select>
+          <select
+            value={year}
+            onChange={(e) => {
+              setYear(e.target.value);
+              if (error) setError(null);
+            }}
+            className="text-[12px] text-gl-text bg-transparent outline-none w-20"
+          >
+            {[now.getFullYear(), now.getFullYear() + 1].map((y) => (
+              <option key={y} value={String(y)}>
+                {y}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -235,12 +290,48 @@ export default function GoLivePage() {
         <label className="text-[11px] font-semibold text-gl-text mb-1.5 block">Time</label>
         <div className="flex items-center gap-2 border border-gl-border rounded-lg px-3 py-2.5">
           <IconClock size={14} className="text-gl-text-secondary shrink-0" />
-          <input
-            type="time"
-            value={time}
-            onChange={(e) => setTime(e.target.value)}
-            className="w-full text-[12px] text-gl-text bg-transparent outline-none"
-          />
+          <select
+            value={hour}
+            onChange={(e) => {
+              setHour(e.target.value);
+              if (error) setError(null);
+            }}
+            className="text-[12px] text-gl-text bg-transparent outline-none w-14"
+          >
+            <option value="">--</option>
+            {Array.from({ length: 12 }, (_, i) => i + 1).map((h) => (
+              <option key={h} value={String(h)}>
+                {h}
+              </option>
+            ))}
+          </select>
+          <span className="text-[12px] text-gl-text-secondary">:</span>
+          <select
+            value={minute}
+            onChange={(e) => {
+              setMinute(e.target.value);
+              if (error) setError(null);
+            }}
+            className="text-[12px] text-gl-text bg-transparent outline-none w-14"
+          >
+            <option value="">--</option>
+            {["00", "15", "30", "45"].map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+          <select
+            value={period}
+            onChange={(e) => {
+              setPeriod(e.target.value as "AM" | "PM");
+              if (error) setError(null);
+            }}
+            className="text-[12px] text-gl-text bg-transparent outline-none w-16"
+          >
+            <option value="AM">AM</option>
+            <option value="PM">PM</option>
+          </select>
         </div>
       </div>
 
