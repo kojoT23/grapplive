@@ -5,8 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { IconArrowLeft, IconTrash } from "@tabler/icons-react";
 import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
-import { useProductsStore } from "@/lib/store/useProductsStore";
-import type { ProductStatus } from "@/lib/mock-data/products";
+import { useCatalogStore } from "@/lib/store/useCatalogStore";
+import type { ProductCategory, ProductStatus } from "@/lib/mock-data/catalog";
 
 const statusOptions: { value: ProductStatus; label: string }[] = [
   { value: "live", label: "Live" },
@@ -15,20 +15,37 @@ const statusOptions: { value: ProductStatus; label: string }[] = [
   { value: "paused", label: "Paused" },
 ];
 
+const categoryOptions: { value: ProductCategory; label: string }[] = [
+  { value: "fashion", label: "Fashion" },
+  { value: "phones", label: "Phones" },
+  { value: "home", label: "Home" },
+  { value: "beauty", label: "Beauty" },
+  { value: "women", label: "Women" },
+  { value: "men", label: "Men" },
+  { value: "children", label: "Children" },
+  { value: "accessories", label: "Accessories" },
+  { value: "electronics", label: "Electronics" },
+];
+
+// No real auth/session yet, so the logged-in seller is hardcoded — same
+// placeholder-id pattern used across this build (storefront, go-live).
+const CURRENT_SELLER_ID = "s1";
+
 export default function EditProductPage() {
   const { isChecking } = useRequireAuth("sell");
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const products = useProductsStore((s) => s.products);
-  const updateProduct = useProductsStore((s) => s.updateProduct);
-  const deleteProduct = useProductsStore((s) => s.deleteProduct);
+  const products = useCatalogStore((s) => s.products);
+  const updateProduct = useCatalogStore((s) => s.updateProduct);
+  const deleteProduct = useCatalogStore((s) => s.deleteProduct);
 
-  const product = products.find((p) => p.id === params.id);
+  const product = products.find((p) => p.id === params.id && p.sellerId === CURRENT_SELLER_ID);
 
   const [name, setName] = useState("");
   const [priceGHS, setPriceGHS] = useState("");
   const [stock, setStock] = useState("");
   const [status, setStatus] = useState<ProductStatus>("draft");
+  const [category, setCategory] = useState<ProductCategory>("fashion");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -36,8 +53,9 @@ export default function EditProductPage() {
     if (product) {
       setName(product.name);
       setPriceGHS(String(product.priceGHS));
-      setStock(String(product.stock));
+      setStock(String(product.stockCount ?? 0));
       setStatus(product.status);
+      setCategory(product.category);
     }
   }, [product]);
 
@@ -68,11 +86,17 @@ export default function EditProductPage() {
     updateProduct(product.id, {
       name: name.trim(),
       priceGHS: Number(priceGHS),
-      stock: Number(stock),
+      stockCount: Number(stock),
       status,
+      category,
       isResellerItem: product.isResellerItem,
       resellerMarkupGHS: product.resellerMarkupGHS,
       draftNote: product.draftNote,
+      unitsSold: product.unitsSold,
+      originalPriceGHS: product.originalPriceGHS,
+      discountPercent: product.discountPercent,
+      rating: product.rating,
+      reviewCount: product.reviewCount,
     });
     router.push("/products");
   };
@@ -149,6 +173,21 @@ export default function EditProductPage() {
           ))}
         </div>
       </div>
+
+      <label className="block mb-6">
+        <span className="text-[10px] font-semibold text-gl-text-secondary mb-1 block">Category</span>
+        <select
+          value={category}
+          onChange={(e) => setCategory(e.target.value as ProductCategory)}
+          className="w-full border border-gl-border-strong rounded-lg px-3 py-2.5 text-[12px] text-gl-text outline-none bg-white"
+        >
+          {categoryOptions.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      </label>
 
       <button
         onClick={handleSave}

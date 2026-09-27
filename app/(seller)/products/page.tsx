@@ -5,9 +5,13 @@ import Link from "next/link";
 import { IconSearch, IconPlus } from "@tabler/icons-react";
 import { TabBar } from "@/components/ui/TabBar";
 import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
-import { useProductsStore } from "@/lib/store/useProductsStore";
+import { useCatalogStore } from "@/lib/store/useCatalogStore";
 import { sellerTabs } from "@/lib/nav/seller-tabs";
-import type { SellerProduct, ProductStatus } from "@/lib/mock-data/products";
+import type { CatalogProduct, ProductStatus } from "@/lib/mock-data/catalog";
+
+// No real auth/session yet, so the logged-in seller is hardcoded — same
+// placeholder-id pattern used across this build (storefront, go-live).
+const CURRENT_SELLER_ID = "s1";
 
 function formatGHS(amount: number) {
   return `GHS ${amount.toLocaleString("en-GH")}`;
@@ -20,14 +24,14 @@ const statusStyles: Record<ProductStatus, { label: string; bg: string; text: str
   paused: { label: "Paused", bg: "bg-gl-bg-muted", text: "text-gl-text-secondary" },
 };
 
-function ProductRow({ product }: { product: SellerProduct }) {
+function ProductRow({ product }: { product: CatalogProduct }) {
   const style = statusStyles[product.status];
 
   const detailLine = product.draftNote
     ? product.draftNote
     : product.isResellerItem && product.resellerMarkupGHS
     ? `${formatGHS(product.priceGHS)} · Reseller · GHS ${product.resellerMarkupGHS} markup`
-    : `${formatGHS(product.priceGHS)} · ${product.stock} in stock`;
+    : `${formatGHS(product.priceGHS)} · ${product.stockCount ?? 0} in stock`;
 
   return (
     <Link
@@ -48,7 +52,7 @@ function ProductRow({ product }: { product: SellerProduct }) {
 
 export default function ProductsPage() {
   const { isChecking } = useRequireAuth("sell");
-  const products = useProductsStore((s) => s.products);
+  const products = useCatalogStore((s) => s.products);
   const [query, setQuery] = useState("");
 
   if (isChecking) {
@@ -59,9 +63,9 @@ export default function ProductsPage() {
     );
   }
 
-  const filtered = products.filter((p) =>
-    p.name.toLowerCase().includes(query.toLowerCase())
-  );
+  const filtered = products
+    .filter((p) => p.sellerId === CURRENT_SELLER_ID)
+    .filter((p) => p.name.toLowerCase().includes(query.toLowerCase()));
 
   return (
     <div className="pb-16">

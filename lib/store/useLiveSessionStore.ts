@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-// Same "one seller's worth of data" prototype scope as useProductsStore,
+// Same "one seller's worth of data" prototype scope as useCatalogStore,
 // useStoreProfileStore, useBuyerRequestsStore — no real auth/session yet,
 // so scheduling always happens as CURRENT_SELLER_ID ("s1"). Kept as an
 // explicit sellerId field (rather than a bare boolean/session object) so
@@ -46,10 +46,12 @@ export const useLiveSessionStore = create<LiveSessionState>()(
 );
 
 // productName is denormalized (stored at schedule time) rather than looked
-// up fresh, because the product picked here comes from useProductsStore
-// (seller inventory) while the buyer-facing product link resolves through
-// catalog.ts (published buyer catalog) — the two aren't unified yet (open
-// item carried forward from earlier handovers). Denormalizing means the
-// name always displays correctly even if that id doesn't resolve in
-// catalog.ts; the "View product" link is best-effort and may 404 until
-// those two data sources are unified.
+// up fresh. useCatalogStore/catalog.ts are unified now (products added via
+// /products/new are real CatalogProducts, not a disconnected shadow copy),
+// but the buyer-facing /live/[id] page still resolves the pinned product
+// through the static catalog.ts snapshot rather than the reactive store —
+// so a session pinning a product created after that snapshot was read
+// still won't resolve there. Denormalizing means the name always displays
+// correctly regardless; the "View product" link is best-effort and may
+// 404 for a newly-created product until /live/[id] is wired to the
+// reactive store too.

@@ -14,9 +14,13 @@ import {
   IconBrandFacebook,
   IconExternalLink,
 } from "@tabler/icons-react";
-import { useProductsStore } from "@/lib/store/useProductsStore";
+import { useCatalogStore } from "@/lib/store/useCatalogStore";
 import { useStoreProfileStore } from "@/lib/store/useStoreProfileStore";
 import { useLiveSessionStore, type Platform as SessionPlatform } from "@/lib/store/useLiveSessionStore";
+
+// No real auth/session yet, so the logged-in seller is hardcoded — same
+// placeholder-id pattern used across this build (storefront, products).
+const CURRENT_SELLER_ID = "s1";
 
 type Platform = "tiktok" | "instagram" | "facebook";
 
@@ -38,8 +42,8 @@ type ScheduledSession = {
 
 export default function GoLivePage() {
   const router = useRouter();
-  const products = useProductsStore((s) => s.products);
-  const productsHasHydrated = useProductsStore((s) => s.hasHydrated);
+  const products = useCatalogStore((s) => s.products);
+  const productsHasHydrated = useCatalogStore((s) => s.hasHydrated);
 
   const socialsHasHydrated = useStoreProfileStore((s) => s.hasHydrated);
   const socials = useStoreProfileStore((s) => s.socials);
@@ -78,7 +82,9 @@ export default function GoLivePage() {
     }
   }, [sessionHasHydrated, existingSession, scheduled]);
 
-  const pinnableProducts = products.filter((p) => p.status === "live");
+  const pinnableProducts = products.filter(
+    (p) => p.sellerId === CURRENT_SELLER_ID && p.status === "live"
+  );
   const selectedProduct = pinnableProducts.find((p) => p.id === productId) ?? null;
 
   const availablePlatforms = (["tiktok", "instagram", "facebook"] as Platform[]).filter((key) => {
@@ -116,7 +122,7 @@ export default function GoLivePage() {
     setError(null);
     const product = products.find((p) => p.id === productId);
     scheduleSession({
-      sellerId: "s1",
+      sellerId: CURRENT_SELLER_ID,
       date,
       time,
       productId,
@@ -440,7 +446,7 @@ export default function GoLivePage() {
                     <div className="text-left">
                       <div className="text-[12px] font-semibold text-gl-text">{p.name}</div>
                       <div className="text-[9px] text-gl-text-secondary">
-                        GHS {p.priceGHS} · {p.stock} in stock
+                        GHS {p.priceGHS} · {p.stockCount ?? 0} in stock
                       </div>
                     </div>
                     {p.id === productId && <IconCheck size={16} className="text-gl-brand" />}

@@ -21,6 +21,12 @@ export type SellerSocials = {
 export type VerifiedTier = "verified_producer" | "trusted_import" | "top_seller";
 export type ProductSourceType = "marketplace" | "grapplive";
 
+// Canonical status field, unified in from the old shadow SellerProduct
+// model (lib/mock-data/products.ts, now retired). Every CatalogProduct
+// needs one so buyer-facing surfaces can distinguish "actually published"
+// from a seller's in-progress draft/paused/out-of-stock listing.
+export type ProductStatus = "live" | "draft" | "out_of_stock" | "paused";
+
 export type ProductSpec = {
   label: string;
   value: string;
@@ -58,6 +64,11 @@ export type CatalogProduct = {
   boxContents?: string[];
   stockCount?: number;
   colorVariants?: ProductColorVariant[];
+  status: ProductStatus;
+  isResellerItem?: boolean;
+  resellerMarkupGHS?: number;
+  draftNote?: string; // e.g. "Needs 2 more photos"
+  unitsSold?: number; // fixture metric for Best Selling ranking — no real sales pipeline yet
 };
 
 export const catalogProducts: CatalogProduct[] = [
@@ -96,6 +107,7 @@ export const catalogProducts: CatalogProduct[] = [
       { label: "Available sizes", value: "S – XL" },
     ],
     boxContents: ["1 × Ankara dress"],
+    status: "live",
     stockCount: 14,
     colorVariants: [
       { label: "Red kente", hex: "#B8283C" },
@@ -138,6 +150,7 @@ export const catalogProducts: CatalogProduct[] = [
       { label: "Available sizes", value: "S – XL" },
     ],
     boxContents: ["1 × Jumpsuit"],
+    status: "live",
     stockCount: 9,
     colorVariants: [
       { label: "Indigo ankara", hex: "#2F4468" },
@@ -177,6 +190,7 @@ export const catalogProducts: CatalogProduct[] = [
       { label: "Available sizes", value: "Made to order — share your measurements" },
     ],
     boxContents: ["1 × Kaba top", "1 × Slit skirt"],
+    status: "live",
     stockCount: 5,
     colorVariants: [
       { label: "Royal blue kente", hex: "#1F4E8C" },
@@ -214,6 +228,7 @@ export const catalogProducts: CatalogProduct[] = [
       { label: "Size", value: "Approx. 180cm × 55cm" },
     ],
     boxContents: ["1 × Headwrap"],
+    status: "live",
     stockCount: 22,
     colorVariants: [
       { label: "Red kente", hex: "#B8283C" },
@@ -257,6 +272,7 @@ export const catalogProducts: CatalogProduct[] = [
       { label: "Charging port", value: "USB-C" },
     ],
     boxContents: ["2 × Earbuds", "1 × Charging case", "1 × USB-C cable", "2 × Extra ear tip sizes"],
+    status: "live",
     stockCount: 27,
     colorVariants: [
       { label: "Black", hex: "#1A1A1A" },
@@ -291,6 +307,7 @@ export const catalogProducts: CatalogProduct[] = [
       { label: "Shelf life", value: "12 months from production" },
     ],
     boxContents: ["1 × Body butter tin", "1 × Lip balm tin", "1 × Hair butter tin"],
+    status: "live",
     stockCount: 8,
   },
 ];

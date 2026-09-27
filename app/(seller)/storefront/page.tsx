@@ -28,6 +28,7 @@ import {
 import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
 import { useBuyerRequestsStore, type BuyerRequest } from "@/lib/store/useBuyerRequestsStore";
 import { useStoreProfileStore } from "@/lib/store/useStoreProfileStore";
+import { useCatalogStore } from "@/lib/store/useCatalogStore";
 import { getSellerById } from "@/lib/mock-data/sellers";
 import { type CatalogProduct } from "@/lib/mock-data/catalog";
 import { getReviewsForProducts } from "@/lib/mock-data/reviews";
@@ -227,7 +228,17 @@ export default function SellerStorefrontPage() {
 
   const seller = getSellerById(CURRENT_SELLER_ID);
   const store = seller?.store;
-  const sellerProducts = seller?.products ?? [];
+
+  // Product data is reactive now (useCatalogStore), not the static
+  // seller.products snapshot — a product added via /products/new shows up
+  // here immediately. Before the store hydrates from localStorage, fall
+  // back to the static snapshot so there's no empty-then-populated flash.
+  const catalogHasHydrated = useCatalogStore((s) => s.hasHydrated);
+  const catalogProducts = useCatalogStore((s) => s.products);
+  const sellerProducts = catalogHasHydrated
+    ? catalogProducts.filter((p) => p.sellerId === CURRENT_SELLER_ID)
+    : seller?.products ?? [];
+
   const sellerReviews = getReviewsForProducts(sellerProducts.map((p) => p.id));
 
   // Editable profile state — seeded from the real Store record, real

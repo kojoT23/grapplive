@@ -29,6 +29,7 @@ export const officialCatalogProducts: CatalogProduct[] = [
       { label: "Compatibility", value: "All Qi-enabled phones" },
     ],
     boxContents: ["1 × Wireless charger", "1 × USB-C cable"],
+    status: "live",
     stockCount: 42,
     colorVariants: [
       { label: "Black", hex: "#1A1A1A" },
@@ -65,6 +66,7 @@ export const officialCatalogProducts: CatalogProduct[] = [
       { label: "Care", value: "Machine wash cold, gentle cycle" },
     ],
     boxContents: ["1 × Wrap dress"],
+    status: "live",
     stockCount: 19,
     colorVariants: [
       { label: "Pink floral", hex: "#E8A0BF" },
@@ -102,6 +104,7 @@ export const officialCatalogProducts: CatalogProduct[] = [
       { label: "Water resistance", value: "IPX5" },
     ],
     boxContents: ["2 × Earbuds", "1 × Charging case", "1 × USB-C cable", "2 × Extra ear tip sizes"],
+    status: "live",
     stockCount: 33,
     colorVariants: [
       { label: "Midnight black", hex: "#1A1A1A" },
@@ -134,6 +137,7 @@ export const officialCatalogProducts: CatalogProduct[] = [
       { label: "Free from", value: "Parabens, sulfates" },
     ],
     boxContents: ["1 × Cleanser (150ml)", "1 × Toner (150ml)", "1 × Moisturizer (50ml)"],
+    status: "live",
     stockCount: 21,
   },
   {
@@ -163,6 +167,7 @@ export const officialCatalogProducts: CatalogProduct[] = [
       { label: "Care", value: "Machine wash cold, inside out" },
     ],
     boxContents: ["1 × Denim jacket"],
+    status: "live",
     stockCount: 26,
     colorVariants: [
       { label: "Mid-wash blue", hex: "#5B7FA6" },
@@ -196,6 +201,7 @@ export const officialCatalogProducts: CatalogProduct[] = [
       { label: "Care", value: "Machine washable" },
     ],
     boxContents: ["1 × Top", "1 × Shorts"],
+    status: "live",
     stockCount: 31,
     colorVariants: [
       { label: "Sky blue", hex: "#A8CBE8" },
@@ -230,6 +236,7 @@ export const officialCatalogProducts: CatalogProduct[] = [
       { label: "Interior", value: "1 zip pocket, 2 slip pockets" },
     ],
     boxContents: ["1 × Tote bag"],
+    status: "live",
     stockCount: 15,
     colorVariants: [
       { label: "Tan", hex: "#C89B6B" },

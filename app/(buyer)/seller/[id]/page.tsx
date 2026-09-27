@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { IconArrowLeft, IconMapPin, IconStar, IconBrandWhatsapp } from "@tabler/icons-react";
-import { ProductCard } from "@/components/ui/ProductCard";
 import { getSellerById } from "@/lib/mock-data/sellers";
 import { SellerFollowButton } from "./SellerFollowButton";
 import { SellerLiveBanner } from "./SellerLiveBanner";
+import { SellerProductGrid } from "./SellerProductGrid";
 
 export default async function SellerProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -124,11 +124,7 @@ export default async function SellerProfilePage({ params }: { params: Promise<{ 
       <h2 className="px-3 md:px-5 pb-2 text-[12px] font-semibold text-gl-text">
         Products from {seller.name}
       </h2>
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3 px-3 md:px-5">
-        {seller.products.map((product) => (
-          <ProductCard key={product.id} product={product} />
-        ))}
-      </div>
+      <SellerProductGrid sellerId={seller.id} initialProducts={seller.products} />
     </div>
   );
 }

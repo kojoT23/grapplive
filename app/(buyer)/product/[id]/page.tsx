@@ -19,7 +19,7 @@ import {
   IconCheck,
 } from "@tabler/icons-react";
 import { useAuthGate } from "@/lib/hooks/useAuthGate";
-import { getProductById } from "@/lib/mock-data/catalog";
+import { useCatalogStore } from "@/lib/store/useCatalogStore";
 import { useCartStore } from "@/lib/store/useCartStore";
 import { ProductReviews } from "@/components/ui/ProductReviews";
 import { BuyerRequestSheet } from "@/components/ui/BuyerRequestSheet";
@@ -43,9 +43,24 @@ export default function ProductPage() {
   const [activeImage, setActiveImage] = useState(0);
   const [selectedColorIndex, setSelectedColorIndex] = useState(0);
 
-  const product = getProductById(params.id);
+  // Reads the reactive catalog store (seeded from the same static
+  // fixtures getProductById used to read from) instead of the static
+  // array directly, so a product a seller just added shows up here too —
+  // not just the fixtures that shipped with the app.
+  const catalogHasHydrated = useCatalogStore((s) => s.hasHydrated);
+  const catalogProducts = useCatalogStore((s) => s.products);
 
-  if (!product) {
+  if (!catalogHasHydrated) {
+    return (
+      <div className="flex items-center justify-center min-h-dvh">
+        <div className="text-[12px] text-gl-text-secondary">Loading…</div>
+      </div>
+    );
+  }
+
+  const product = catalogProducts.find((p) => p.id === params.id);
+
+  if (!product || product.status !== "live") {
     return (
       <div className="px-4 pt-4">
         <button

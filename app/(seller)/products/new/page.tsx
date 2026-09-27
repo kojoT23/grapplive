@@ -4,8 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { IconArrowLeft } from "@tabler/icons-react";
 import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
-import { useProductsStore } from "@/lib/store/useProductsStore";
-import type { ProductStatus } from "@/lib/mock-data/products";
+import { useCatalogStore } from "@/lib/store/useCatalogStore";
+import type { ProductCategory, ProductStatus } from "@/lib/mock-data/catalog";
 
 const statusOptions: { value: ProductStatus; label: string }[] = [
   { value: "live", label: "Live" },
@@ -13,15 +13,28 @@ const statusOptions: { value: ProductStatus; label: string }[] = [
   { value: "paused", label: "Paused" },
 ];
 
+const categoryOptions: { value: ProductCategory; label: string }[] = [
+  { value: "fashion", label: "Fashion" },
+  { value: "phones", label: "Phones" },
+  { value: "home", label: "Home" },
+  { value: "beauty", label: "Beauty" },
+  { value: "women", label: "Women" },
+  { value: "men", label: "Men" },
+  { value: "children", label: "Children" },
+  { value: "accessories", label: "Accessories" },
+  { value: "electronics", label: "Electronics" },
+];
+
 export default function NewProductPage() {
   const { isChecking } = useRequireAuth("sell");
   const router = useRouter();
-  const addProduct = useProductsStore((s) => s.addProduct);
+  const addProduct = useCatalogStore((s) => s.addProduct);
 
   const [name, setName] = useState("");
   const [priceGHS, setPriceGHS] = useState("");
   const [stock, setStock] = useState("");
   const [status, setStatus] = useState<ProductStatus>("draft");
+  const [category, setCategory] = useState<ProductCategory>("fashion");
   const [isSaving, setIsSaving] = useState(false);
 
   if (isChecking) {
@@ -40,8 +53,9 @@ export default function NewProductPage() {
     const id = addProduct({
       name: name.trim(),
       priceGHS: Number(priceGHS),
-      stock: Number(stock),
+      stockCount: Number(stock),
       status,
+      category,
     });
     router.push(`/products/${id}`);
   };
@@ -107,6 +121,21 @@ export default function NewProductPage() {
           ))}
         </div>
       </div>
+
+      <label className="block mb-6">
+        <span className="text-[10px] font-semibold text-gl-text-secondary mb-1 block">Category</span>
+        <select
+          value={category}
+          onChange={(e) => setCategory(e.target.value as ProductCategory)}
+          className="w-full border border-gl-border-strong rounded-lg px-3 py-2.5 text-[12px] text-gl-text outline-none bg-white"
+        >
+          {categoryOptions.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      </label>
 
       <button
         onClick={handleSave}
