@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import {
   IconArrowLeft,
@@ -93,7 +94,7 @@ export default function ProductPage() {
     setActiveImage(index);
   };
 
-  const imageCount = product.imageCount ?? 1;
+  const imageCount = product.images?.length ?? product.imageCount ?? 1;
   const images = Array.from({ length: imageCount }, (_, i) => i);
   const selectedColor = product.colorVariants?.[selectedColorIndex];
 
@@ -126,8 +127,19 @@ export default function ProductPage() {
         >
           {images.map((i) => {
             const isVideo = product.videoSlideIndex === i;
+            const photoSrc = product.images?.[i];
             return (
-              <div key={i} className="w-full h-full shrink-0 snap-center gl-shimmer relative">
+              <div key={i} className="w-full h-full shrink-0 snap-center gl-shimmer relative overflow-hidden">
+                {photoSrc && (
+                  <Image
+                    src={photoSrc}
+                    alt={product.name}
+                    fill
+                    sizes="480px"
+                    className="object-cover"
+                    unoptimized
+                  />
+                )}
                 {isVideo && (
                   <>
                     <span className="absolute top-2.5 left-2.5 bg-black/60 text-white text-[8px] font-semibold px-1.5 py-0.5 rounded">

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { IconArrowLeft } from "@tabler/icons-react";
 import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
 import { useCatalogStore } from "@/lib/store/useCatalogStore";
+import { ProductImageUploader } from "@/components/ui/ProductImageUploader";
 import type { ProductCategory, ProductStatus } from "@/lib/mock-data/catalog";
 
 const statusOptions: { value: ProductStatus; label: string }[] = [
@@ -35,6 +36,7 @@ export default function NewProductPage() {
   const [stock, setStock] = useState("");
   const [status, setStatus] = useState<ProductStatus>("draft");
   const [category, setCategory] = useState<ProductCategory>("fashion");
+  const [images, setImages] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
   if (isChecking) {
@@ -56,6 +58,7 @@ export default function NewProductPage() {
       stockCount: Number(stock),
       status,
       category,
+      images: images.length > 0 ? images : undefined,
     });
     router.push(`/products/${id}`);
   };
@@ -79,6 +82,8 @@ export default function NewProductPage() {
           className="w-full border border-gl-border-strong rounded-lg px-3 py-2.5 text-[12px] text-gl-text outline-none"
         />
       </label>
+
+      <ProductImageUploader images={images} onChange={setImages} />
 
       <div className="flex gap-2.5 mb-3">
         <label className="flex-1 block">

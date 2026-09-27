@@ -47,7 +47,12 @@ type ProductCardProps = {
   flipOnHover?: boolean;
 };
 
-export function ProductCard({ product, soldToday, imageSrc, flipOnHover }: ProductCardProps) {
+export function ProductCard({ product, soldToday, imageSrc: imageSrcOverride, flipOnHover }: ProductCardProps) {
+  // Explicit imageSrc (used by the curated GrappStore illustration lookup)
+  // wins; otherwise fall back to the product's own uploaded photo. Most
+  // marketplace/seller products have neither, so the woven placeholder
+  // still applies to them.
+  const imageSrc = imageSrcOverride ?? product.images?.[0];
   const hasHydrated = useWishlistStore((s) => s.hasHydrated);
   const isWishlistedRaw = useWishlistStore((s) => s.isWishlisted(product.id));
   const isWishlisted = hasHydrated && isWishlistedRaw;

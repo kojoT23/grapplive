@@ -6,6 +6,7 @@ import Link from "next/link";
 import { IconArrowLeft, IconTrash } from "@tabler/icons-react";
 import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
 import { useCatalogStore } from "@/lib/store/useCatalogStore";
+import { ProductImageUploader } from "@/components/ui/ProductImageUploader";
 import type { ProductCategory, ProductStatus } from "@/lib/mock-data/catalog";
 
 const statusOptions: { value: ProductStatus; label: string }[] = [
@@ -46,6 +47,7 @@ export default function EditProductPage() {
   const [stock, setStock] = useState("");
   const [status, setStatus] = useState<ProductStatus>("draft");
   const [category, setCategory] = useState<ProductCategory>("fashion");
+  const [images, setImages] = useState<string[]>([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -56,6 +58,7 @@ export default function EditProductPage() {
       setStock(String(product.stockCount ?? 0));
       setStatus(product.status);
       setCategory(product.category);
+      setImages(product.images ?? []);
     }
   }, [product]);
 
@@ -89,6 +92,7 @@ export default function EditProductPage() {
       stockCount: Number(stock),
       status,
       category,
+      images: images.length > 0 ? images : undefined,
       isResellerItem: product.isResellerItem,
       resellerMarkupGHS: product.resellerMarkupGHS,
       draftNote: product.draftNote,
@@ -133,6 +137,8 @@ export default function EditProductPage() {
           className="w-full border border-gl-border-strong rounded-lg px-3 py-2.5 text-[12px] text-gl-text outline-none"
         />
       </label>
+
+      <ProductImageUploader images={images} onChange={setImages} />
 
       <div className="flex gap-2.5 mb-3">
         <label className="flex-1 block">

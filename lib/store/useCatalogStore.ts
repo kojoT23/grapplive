@@ -41,6 +41,7 @@ export type NewCatalogProductInput = {
   discountPercent?: number;
   rating?: number;
   reviewCount?: number;
+  images?: string[];
 };
 
 type CatalogState = {

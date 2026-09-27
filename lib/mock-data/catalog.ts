@@ -55,6 +55,7 @@ export type CatalogProduct = {
   rating?: number;
   reviewCount?: number;
   imageCount?: number;
+  images?: string[]; // base64 data URLs, up to 4, first is the card thumbnail
   videoSlideIndex?: number;
   deliveryEstimate?: string;
   returnPolicyDays?: number;
