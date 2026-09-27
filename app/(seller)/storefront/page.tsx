@@ -12,7 +12,6 @@ import {
   IconShare,
   IconPencil,
   IconPlayerPlayFilled,
-  IconDots,
   IconMicrophone,
   IconVideo,
   IconBrandWhatsapp,
@@ -24,7 +23,6 @@ import {
   IconSparkles,
   IconEyeOff,
   IconCheck,
-  IconTools,
   IconBroadcast,
 } from "@tabler/icons-react";
 import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
@@ -48,21 +46,12 @@ type ContentTab = (typeof contentTabs)[number];
 // Only Home, Reviews, and About have real data behind them right now.
 // The others get an honest "not built yet" placeholder rather than
 // silently showing nothing when clicked.
-const unbuiltTabs = new Set<ContentTab>(["Products", "Collections", "Deals"]);
+
 
 const featuredVideos = [
   { id: "v1", title: "New Ankara Collection", priceGHS: 180, durationLabel: "0:26" },
   { id: "v2", title: "3 Ways to Style This Dress", priceGHS: 165, durationLabel: "0:32" },
   { id: "v3", title: "Weekend Deals You'll Love", priceGHS: 120, durationLabel: "0:29" },
-];
-
-const storeCategories = [
-  { label: "Dresses", count: 28 },
-  { label: "Tops", count: 36 },
-  { label: "Bottoms", count: 24 },
-  { label: "Jumpsuits", count: 18 },
-  { label: "Shoes", count: 22 },
-  { label: "Bags", count: 15 },
 ];
 
 const requestStatusConfig = {
@@ -258,6 +247,14 @@ export default function SellerStorefrontPage() {
   const bestSelling = [...sellerProducts].sort((a, b) => (b.reviewCount ?? 0) - (a.reviewCount ?? 0)).slice(0, 6);
   const latestProducts = sellerProducts.slice(0, 6);
   const totalReviews = sellerProducts.reduce((sum, p) => sum + (p.reviewCount ?? 0), 0);
+
+  const categoryCounts = (() => {
+    const counts = new Map<string, number>();
+    for (const product of sellerProducts) {
+      counts.set(product.category, (counts.get(product.category) ?? 0) + 1);
+    }
+    return Array.from(counts.entries()).map(([category, count]) => ({ category, count }));
+  })();
 
   const requests = useBuyerRequestsStore((s) => s.requests);
   const markReplied = useBuyerRequestsStore((s) => s.markReplied);
@@ -572,21 +569,23 @@ export default function SellerStorefrontPage() {
             title="Shop by category"
             accentClass="bg-gl-amber-soft-bg text-gl-amber-soft-text"
           />
-          <div className="flex gap-3.5 px-3 md:px-5 pb-4 overflow-x-auto">
-            {storeCategories.map((cat) => (
-              <div key={cat.label} className="text-center text-[9px] text-gl-text-secondary shrink-0">
-                <div className="w-[46px] h-[46px] rounded-full mx-auto mb-1 gl-shimmer" />
-                <div>{cat.label}</div>
-                <div className="text-gl-text-muted">({cat.count})</div>
-              </div>
-            ))}
-            <div className="text-center text-[9px] text-gl-text-secondary shrink-0">
-              <div className="w-[46px] h-[46px] rounded-full mx-auto mb-1 bg-gl-bg-muted flex items-center justify-center">
-                <IconDots size={18} className="text-gl-text-secondary" />
-              </div>
-              More
+          {categoryCounts.length === 0 ? (
+            <div className="px-3 md:px-5 pb-4 text-[11px] text-gl-text-secondary">No products yet.</div>
+          ) : (
+            <div className="flex gap-3.5 px-3 md:px-5 pb-4 overflow-x-auto">
+              {categoryCounts.map((cat) => (
+                <button
+                  key={cat.category}
+                  onClick={() => setActiveTab("Collections")}
+                  className="text-center text-[9px] text-gl-text-secondary shrink-0 active:opacity-70 transition-opacity"
+                >
+                  <div className="w-[46px] h-[46px] rounded-full mx-auto mb-1 gl-shimmer" />
+                  <div>{cat.category.charAt(0).toUpperCase() + cat.category.slice(1)}</div>
+                  <div className="text-gl-text-muted">({cat.count})</div>
+                </button>
+              ))}
             </div>
-          </div>
+          )}
 
           <ProductRow
             title="Best selling products"
@@ -603,6 +602,81 @@ export default function SellerStorefrontPage() {
             emptyLabel="No products yet."
           />
         </>
+      )}
+
+      {activeTab === "Products" && (
+        <div className="px-3 md:px-5 pt-3 pb-4">
+          {sellerProducts.length === 0 ? (
+            <p className="text-[11px] text-gl-text-secondary">No products yet.</p>
+          ) : (
+            <div className="flex flex-wrap gap-2.5">
+              {sellerProducts.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === "Collections" && (
+        <div className="pt-1 pb-4">
+          {(() => {
+            const byCategory = new Map<string, CatalogProduct[]>();
+            for (const product of sellerProducts) {
+              const list = byCategory.get(product.category) ?? [];
+              list.push(product);
+              byCategory.set(product.category, list);
+            }
+            const categories = Array.from(byCategory.keys());
+
+            if (categories.length === 0) {
+              return (
+                <p className="px-3 md:px-5 text-[11px] text-gl-text-secondary">
+                  No products yet, so there&apos;s nothing to group into collections.
+                </p>
+              );
+            }
+
+            return categories.map((category) => (
+              <div key={category}>
+                <SectionHeader
+                  icon={<IconLayoutGrid size={12} />}
+                  title={category.charAt(0).toUpperCase() + category.slice(1)}
+                  accentClass="bg-gl-amber-soft-bg text-gl-amber-soft-text"
+                />
+                <div className="flex gap-2.5 px-3 md:px-5 pb-4 overflow-x-auto">
+                  {(byCategory.get(category) ?? []).map((product) => (
+                    <ProductCard key={product.id} product={product} />
+                  ))}
+                </div>
+              </div>
+            ));
+          })()}
+        </div>
+      )}
+
+      {activeTab === "Deals" && (
+        <div className="px-3 md:px-5 pt-3 pb-4">
+          {(() => {
+            const dealsProducts = sellerProducts.filter(
+              (p) => typeof p.discountPercent === "number" && p.discountPercent > 0
+            );
+            if (dealsProducts.length === 0) {
+              return (
+                <p className="text-[11px] text-gl-text-secondary">
+                  No deals right now — discounted products will show up here automatically.
+                </p>
+              );
+            }
+            return (
+              <div className="flex flex-wrap gap-2.5">
+                {dealsProducts.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+            );
+          })()}
+        </div>
       )}
 
       {activeTab === "Reviews" && (
@@ -692,18 +766,6 @@ export default function SellerStorefrontPage() {
               )}
             </div>
           )}
-        </div>
-      )}
-
-      {unbuiltTabs.has(activeTab) && (
-        <div className="mx-3 md:mx-5 mt-3 border border-dashed border-gl-border rounded-lg py-8 flex flex-col items-center text-center">
-          <div className="w-9 h-9 rounded-full bg-gl-bg-muted flex items-center justify-center mb-2">
-            <IconTools size={16} className="text-gl-text-muted" />
-          </div>
-          <p className="text-[11px] text-gl-text-secondary px-6">
-            {activeTab} isn&apos;t built yet — this tab is honestly marked rather than showing
-            nothing.
-          </p>
         </div>
       )}
 
