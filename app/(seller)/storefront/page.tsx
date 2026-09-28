@@ -225,6 +225,7 @@ export default function SellerStorefrontPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<ContentTab>("Home");
   const [showEditSheet, setShowEditSheet] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
 
   const seller = getSellerById(CURRENT_SELLER_ID);
   const store = seller?.store;
@@ -287,6 +288,30 @@ export default function SellerStorefrontPage() {
   const handleCallOnWhatsApp = (req: BuyerRequest) => {
     window.open(whatsAppLink(req.buyerPhone, req.productName), "_blank");
     markReplied(req.id);
+  };
+
+  // Buyer-facing storefront is /seller/[id] — same page the "View my
+  // storefront" preview link below already points to. Web Share API on
+  // mobile (drops straight into WhatsApp/Instagram/etc.); clipboard copy
+  // as the desktop fallback, since navigator.share isn't implemented in
+  // most desktop browsers.
+  const handleShare = async () => {
+    const url = `${window.location.origin}/seller/${CURRENT_SELLER_ID}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: storeName, url });
+      } catch {
+        // User dismissed the native share sheet — not an error.
+      }
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2000);
+    } catch {
+      // Clipboard blocked (e.g. insecure context) — nothing more to do.
+    }
   };
 
   const storeName = seller?.name ?? "My Store";
@@ -412,8 +437,20 @@ export default function SellerStorefrontPage() {
               <IconPencil size={13} />
               Edit storefront
             </button>
-            <button className="w-10 h-9 bg-white/15 rounded-lg flex items-center justify-center active:bg-white/25 transition-colors">
-              <IconShare size={14} className="text-white" />
+            <button
+              onClick={handleShare}
+              className="w-10 h-9 bg-white/15 rounded-lg flex items-center justify-center active:bg-white/25 transition-colors relative"
+            >
+              {shareCopied ? (
+                <IconCheck size={14} className="text-white" />
+              ) : (
+                <IconShare size={14} className="text-white" />
+              )}
+              {shareCopied && (
+                <span className="absolute -bottom-6 right-0 bg-gl-text text-white text-[9px] px-2 py-1 rounded-md whitespace-nowrap">
+                  Link copied!
+                </span>
+              )}
             </button>
           </div>
         </div>
