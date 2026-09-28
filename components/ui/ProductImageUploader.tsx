@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { IconPhoto, IconPlus, IconTrash } from "@tabler/icons-react";
-import { MAX_IMAGE_BYTES, readFileAsDataUrl } from "@/lib/utils/image-upload";
+import { MAX_IMAGE_BYTES, compressImageFile } from "@/lib/utils/image-upload";
 
 const MAX_PHOTOS = 4;
 
@@ -25,7 +25,7 @@ function Slot({
     e.target.value = ""; // allow re-selecting the same file later
     if (!file) return;
     if (file.size > MAX_IMAGE_BYTES) {
-      setError("Over 2MB — pick a smaller photo.");
+      setError("That photo is too large — try a smaller one.");
       return;
     }
     setError(null);
@@ -79,7 +79,7 @@ export function ProductImageUploader({
   onChange: (images: string[]) => void;
 }) {
   const handleUpload = async (index: number, file: File) => {
-    const dataUrl = await readFileAsDataUrl(file);
+    const dataUrl = await compressImageFile(file);
     const next = [...images];
     next[index] = dataUrl;
     onChange(next);

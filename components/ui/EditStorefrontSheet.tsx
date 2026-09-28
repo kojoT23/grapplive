@@ -12,7 +12,7 @@ import {
   IconTrash,
 } from "@tabler/icons-react";
 import { useStoreProfileStore } from "@/lib/store/useStoreProfileStore";
-import { MAX_IMAGE_BYTES, readFileAsDataUrl } from "@/lib/utils/image-upload";
+import { MAX_IMAGE_BYTES, compressImageFile } from "@/lib/utils/image-upload";
 
 function ImageUploadRow({
   label,
@@ -35,7 +35,7 @@ function ImageUploadRow({
     e.target.value = ""; // allow re-selecting the same file later
     if (!file) return;
     if (file.size > MAX_IMAGE_BYTES) {
-      setError("That image is over 2MB — please pick a smaller file.");
+      setError("That image is too large — please pick a smaller file.");
       return;
     }
     setError(null);
@@ -159,7 +159,7 @@ export function EditStorefrontSheet({
           label="Store logo"
           preview={logoPreview}
           aspectClass="h-[72px] w-[72px] rounded-full mx-auto"
-          onChange={(file) => readFileAsDataUrl(file).then(setLogoPreview)}
+          onChange={(file) => compressImageFile(file).then(setLogoPreview)}
           onRemove={() => setLogoPreview(null)}
         />
 
@@ -167,7 +167,7 @@ export function EditStorefrontSheet({
           label="Store banner"
           preview={bannerPreview}
           aspectClass="h-[92px]"
-          onChange={(file) => readFileAsDataUrl(file).then(setBannerPreview)}
+          onChange={(file) => compressImageFile(file).then(setBannerPreview)}
           onRemove={() => setBannerPreview(null)}
         />
 
