@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { safeJSONStorage } from "@/lib/utils/safe-storage";
 import { getStoreBySellerId, type StoreSocials } from "@/lib/mock-data/stores";
 
 // Same "one seller's worth of data" prototype scope as the other stores
@@ -40,6 +41,7 @@ export const useStoreProfileStore = create<StoreProfileState>()(
     }),
     {
       name: "grapplive-store-profile",
+      storage: safeJSONStorage,
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
       },

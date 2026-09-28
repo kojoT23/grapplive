@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { safeJSONStorage } from "@/lib/utils/safe-storage";
 
 type WishlistState = {
   productIds: string[];
@@ -31,6 +32,7 @@ export const useWishlistStore = create<WishlistState>()(
     }),
     {
       name: "grapplelive-wishlist",
+      storage: safeJSONStorage,
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
       },

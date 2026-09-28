@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { safeJSONStorage } from "@/lib/utils/safe-storage";
 
 export type CartItem = {
   productId: string;
@@ -51,6 +52,7 @@ export const useCartStore = create<CartState>()(
     }),
     {
       name: "grapplelive-cart",
+      storage: safeJSONStorage,
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
       },

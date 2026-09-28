@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { safeJSONStorage } from "@/lib/utils/safe-storage";
 
 // grapplive_staff is deliberately separate from "sell" — a marketplace
 // seller is not GRAPPlive staff, and shouldn't get access to GRAPPlive's
@@ -63,6 +64,7 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: "grapplelive-session",
+      storage: safeJSONStorage,
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
       },

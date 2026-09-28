@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { safeJSONStorage } from "@/lib/utils/safe-storage";
 
 // Same "one seller's worth of data" prototype scope as useCatalogStore,
 // useStoreProfileStore, useBuyerRequestsStore — no real auth/session yet,
@@ -38,6 +39,7 @@ export const useLiveSessionStore = create<LiveSessionState>()(
     }),
     {
       name: "grapplive-live-session",
+      storage: safeJSONStorage,
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
       },

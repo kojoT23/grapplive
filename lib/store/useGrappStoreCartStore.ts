@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { safeJSONStorage } from "@/lib/utils/safe-storage";
 
 // Deliberately separate from useCartStore (marketplace). GrappStore is a
 // different merchant relationship — buyer confirmed this should not mix
@@ -51,6 +52,7 @@ export const useGrappStoreCartStore = create<GrappStoreCartState>()(
     }),
     {
       name: "grapplelive-grappstore-cart",
+      storage: safeJSONStorage,
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
       },

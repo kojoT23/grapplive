@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { safeJSONStorage } from "@/lib/utils/safe-storage";
 import {
   availableBalanceGHS as initialBalanceGHS,
   momoDetails as initialMomoDetails,
@@ -76,6 +77,7 @@ export const usePayoutsStore = create<PayoutsState>()(
     }),
     {
       name: "grapplive-payouts",
+      storage: safeJSONStorage,
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
       },

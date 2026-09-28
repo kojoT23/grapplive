@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { safeJSONStorage } from "@/lib/utils/safe-storage";
 
 type FollowingState = {
   sellerIds: string[];
@@ -27,6 +28,7 @@ export const useFollowingStore = create<FollowingState>()(
     }),
     {
       name: "grapplelive-following",
+      storage: safeJSONStorage,
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
       },

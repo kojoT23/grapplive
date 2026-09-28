@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { safeJSONStorage } from "@/lib/utils/safe-storage";
 import {
   catalogProducts,
   type CatalogProduct,
@@ -109,6 +110,7 @@ export const useCatalogStore = create<CatalogState>()(
     }),
     {
       name: "grapplive-catalog",
+      storage: safeJSONStorage,
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
       },
