@@ -107,7 +107,6 @@ export default function ProductPage() {
   const callMessage = "Hi, I'd like to request a video call about " + product.name + " before I buy.";
   const whatsappCallUrl = "https://wa.me/" + whatsappNumber + "?text=" + encodeURIComponent(callMessage);
 
-  const whatsappUrl = "https://wa.me/" + whatsappNumber;
   const signalUrl = "https://signal.me/#p/" + signalNumber;
   const telegramUrl = "https://t.me/" + telegramHandle;
   const tiktokUrl = "https://www.tiktok.com/@" + tiktokHandle;
