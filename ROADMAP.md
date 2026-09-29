@@ -91,14 +91,18 @@ reference, not the reverse), matching sub-fields.
 
 ## 2. Live bugs (independent of backend timing)
 
-### 2.1 🟡 `useCustomersStore` isn't persisted
+### 2.1 ✅ Resolved — `useCustomersStore` isn't persisted
 No `persist` middleware, no `hasHydrated` — unlike every other store in
 this codebase. Every tag added, every note typed into a customer's profile
-in the CRM UI is lost on page reload today. This should be fixed
-immediately regardless of any backend roadmap; it's a one-line change to
-match the pattern every other store already uses (see `useWishlistStore`,
-`useFollowingStore`, etc.), and it's a real, live data-loss bug for anyone
-using `/customers` right now.
+in the CRM UI was lost on page reload. Fixed: wrapped in `persist()` +
+`safeJSONStorage`, matching every other store; `selectedIds`/
+`isSelectMode` deliberately excluded from persistence via `partialize`
+(bulk-select UI state, not data worth surviving a reload — and `Set`
+doesn't serialize to JSON cleanly anyway). Also fixed a related latent
+bug found while wiring this up: `/customers/[id]`'s `notesDraft` field
+would have locked onto the pre-hydration (empty) notes value and never
+resynced. *Commit: "Persist useCustomersStore — CRM tags/notes no longer
+lost on reload."*
 
 ### 2.2 🟡 `status` and `stockCount` can silently disagree
 `CatalogProduct.status` (`live`/`draft`/`out_of_stock`/`paused`) is a field
@@ -211,9 +215,8 @@ users' localStorage has either spelling baked into it.
 
 ## 7. Suggested sequencing
 
-1. **Fix 2.1 now** (`useCustomersStore` persistence) — it's a live bug,
-   unrelated to any architecture decision, one line matching an existing
-   pattern.
+1. **2.1 is done** — was the live bug, fixed first, ahead of everything
+   else in this document.
 2. **Resolve section 1 before writing any backend schema** — specifically
    1.1 (seller creation on signup) and 1.4's open design question
    (global vs. per-seller `Customer`), since those are the two decisions
