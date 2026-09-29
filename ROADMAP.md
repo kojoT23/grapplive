@@ -14,6 +14,7 @@ Each item is marked:
   phase sequencing, listed here so it's a documented decision, not a gap
   discovered by surprise later.
 - ⚪ **Cosmetic** — zero functional impact, cheap whenever convenient.
+- ✅ **Resolved** — fixed, with the commit that fixed it.
 
 ---
 
@@ -224,3 +225,102 @@ users' localStorage has either spelling baked into it.
 4. **Section 3 stays deferred** exactly as your own phase list already
    sequences it — this document doesn't argue for reordering that.
 5. **Section 5 (cosmetic)** — whenever convenient, no urgency.
+6. **Section 8 items are already done** — listed for the record, not as
+   remaining work.
+7. **Section 9 needs your input, not more auditing** — each item there is
+   a product decision (build it, or delete the dead UI), not something to
+   guess at.
+
+---
+
+## 8. Performance & reliability — resolved this pass
+
+Found and fixed together, since #1 was a risk introduced by the product-
+photo feature itself and the other three are what stops that class of
+failure from ever reaching the user again.
+
+### 8.1 ✅ Resolved — uploaded photos were stored uncompressed
+Product photos and storefront logo/banner were stored as raw base64 —
+routinely 3-8MB per phone photo, up to 4 photos per product. localStorage
+caps out around 5-10MB **per origin, total**, shared across every
+persisted store (cart, wishlist, orders, the whole catalog) — a single
+product with max-size photos could have exceeded the entire quota and
+broken every other store sharing it, not just uploads. Fixed by resizing
+to 900px on the long edge and re-encoding as JPEG before anything gets
+stored (`lib/utils/image-upload.ts`'s `compressImageFile`) — roughly a
+10x reduction on a typical phone photo. *Commit: "Compress uploaded
+photos before storing them."*
+
+### 8.2 ✅ Resolved — a full localStorage quota would have crashed the app
+Zustand's default storage adapter throws on quota-exceeded or a blocked
+store (private browsing). Uncaught, mid-render, with zero error
+boundaries anywhere (see 8.3) — that's a real path to a white screen over
+something as small as one too many photos. Fixed with
+`lib/utils/safe-storage.ts`, a wrapper that catches read/write failures
+so a failed persist just doesn't survive a reload, rather than crashing
+the page. Applied to all 10 persisted stores. *Commit: "Make every
+persisted store survive a localStorage quota/corruption error."* Prototype-
+phase safety net only — see 4.2/section 1 for the real fix (this data
+shouldn't be in localStorage at all once a backend exists).
+
+### 8.3 ✅ Resolved — zero error boundaries anywhere in the app
+Confirmed via full search: no `error.tsx`, `global-error.tsx`, or
+`loading.tsx` in `app/`. Any unhandled render error had nowhere to land —
+likely a blank white screen, worst possible failure mode for a commerce
+app mid-checkout or mid-payout. Fixed: `app/error.tsx` (route-level,
+styled to match the existing `not-found.tsx`) and `app/global-error.tsx`
+(root-layout-level fallback). *Commit: "Add app-wide error boundaries
+(none existed before)."*
+
+### 8.4 ✅ Resolved — hardcoded hex duplicating an existing design token
+Five files hardcoded `bg-[#0B0B0B]` instead of the already-defined
+`--color-gl-text` token (same value). Zero visual change, just means a
+future palette tweak happens in one place instead of drifting across
+five. *Commit: "Use the existing gl-text token instead of hardcoding its
+hex value."* Not re-audited beyond this one duplicate — a full pass for
+other hardcoded values wasn't done.
+
+### 8.5 ✅ Resolved — an entire orphaned component
+`app/(buyer)/product/[id]/ProductActions.tsx` (Add to cart / Checkout /
+Request video call / WhatsApp-TikTok-Instagram buttons) was never
+imported or rendered anywhere — `page.tsx` already fully reimplements the
+same functionality inline, correctly. Deleted the dead file rather than
+"fixing" buttons in code nothing runs. *Commit: "Remove orphaned
+ProductActions.tsx and an unused variable."*
+
+### 8.6 🟢 Not yet done — real image storage
+8.1's fix reduces the risk, doesn't remove it. A determined seller
+uploading many products with max-size photos could still eventually
+approach the quota. Real fix stays what section 1/4.2 already say: images
+belong in real object storage (S3-compatible / Cloudinary) with a CDN,
+not localStorage, once a backend exists.
+
+---
+
+## 9. UI completeness — buttons with no handler
+
+Full-app sweep for `<button>` elements with no `onClick`. Five buttons
+found (ProductActions.tsx's three are covered in 8.5, resolved by
+deletion, not listed again here). Each of the following needs a product
+decision, not a default guess — none were touched.
+
+### 9.1 🟢 `/discover` — Heart/Comment/Share are dead on a single-story mockup
+The whole page is one hardcoded "Adjoa Beauty" story with no real feed
+behind it — not just these three buttons. Wiring up a fake like counter
+wasn't done on purpose: a fabricated "1.2k likes" is exactly the
+"unnecessary social gamification" AGENTS.md §35 already warns against.
+**Needs a decision:** is `/discover` becoming a real short-video feed, or
+was it a design exploration not actually on the roadmap? That decides
+build-it vs. delete-it.
+
+### 9.2 🟢 Home page's "Accra" button — dead location selector
+No delivery-location switching exists behind it. Likely a real feature
+for a Ghana-wide marketplace, but building it means deciding which
+cities/areas are supported and what it actually affects (search results?
+delivery cost? nothing yet?) — a product-scope question, not a wiring fix.
+
+### 9.3 🟢 Analytics "Last 7 days" dropdown — dead, and would show the same numbers if wired up
+`revenueGHS7Day` and friends are static fixture numbers with no variation
+by time range yet — wiring the dropdown to switch ranges wouldn't
+actually show different data today. Lower priority until there's real
+data behind it.
