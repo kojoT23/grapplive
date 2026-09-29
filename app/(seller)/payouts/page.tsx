@@ -88,7 +88,7 @@ export default function PayoutsPage() {
     <div className="pb-16">
       <h1 className="px-3 md:px-5 pt-3.5 pb-2 text-[14px] font-semibold text-gl-text">Payouts</h1>
 
-      <div className="mx-3 md:mx-5 mb-2.5 bg-[#0B0B0B] rounded-lg p-3.5">
+      <div className="mx-3 md:mx-5 mb-2.5 bg-gl-text rounded-lg p-3.5">
         <div className="text-[9px] text-white/60 mb-0.5">Available balance</div>
         <div className="text-[22px] font-semibold text-white mb-2.5">
           {hasHydrated ? formatGHS(balanceGHS) : <span className="inline-block w-20 h-[22px] bg-white/10 rounded gl-shimmer" />}

@@ -34,7 +34,7 @@ export default function ScanPage() {
   };
 
   return (
-    <div className="bg-[#0B0B0B] min-h-dvh relative">
+    <div className="bg-gl-text min-h-dvh relative">
       <div className="flex items-center gap-2 px-3 pt-3.5 pb-3 relative z-10">
         <button onClick={() => router.back()} className="active:opacity-60 transition-opacity" aria-label="Back">
           <IconArrowLeft size={18} className="text-white" />

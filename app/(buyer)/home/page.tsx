@@ -94,7 +94,7 @@ export default function HomePage() {
 
       <Link
         href="/verified"
-        className="mx-3 md:mx-5 mb-2.5 bg-[#0B0B0B] rounded-lg px-3 py-2.5 flex items-center justify-between relative overflow-hidden transition-transform active:scale-[0.98]"
+        className="mx-3 md:mx-5 mb-2.5 bg-gl-text rounded-lg px-3 py-2.5 flex items-center justify-between relative overflow-hidden transition-transform active:scale-[0.98]"
       >
         <div className="absolute -top-4 -right-4 w-16 h-16 rounded-full bg-gl-brand/25" />
         <div className="relative">

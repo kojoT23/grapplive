@@ -130,7 +130,7 @@ export default function AccountPage() {
 
   return (
     <div className="pb-16">
-      <div className="bg-[#0B0B0B] px-3 md:px-5 pt-5 pb-5 relative overflow-hidden">
+      <div className="bg-gl-text px-3 md:px-5 pt-5 pb-5 relative overflow-hidden">
         <div className="absolute -top-6 -right-6 w-28 h-28 rounded-full bg-gl-brand/20" />
         <div className="relative flex items-center gap-3">
           <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center shrink-0 border-2 border-white/20">

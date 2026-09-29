@@ -8,7 +8,7 @@ export default function GrappVerifiedPage() {
 
   return (
     <div className="pb-6">
-      <div className="bg-[#0B0B0B] px-3 md:px-5 pt-4 pb-4 relative overflow-hidden">
+      <div className="bg-gl-text px-3 md:px-5 pt-4 pb-4 relative overflow-hidden">
         <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-gl-brand/25" />
         <div className="relative flex items-center gap-2 mb-2">
           <Link href="/home" className="active:opacity-60 transition-opacity">
