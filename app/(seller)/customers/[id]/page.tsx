@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { IconArrowLeft, IconCrown, IconPlus } from "@tabler/icons-react";
 import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
@@ -15,6 +15,7 @@ export default function CustomerProfilePage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const customers = useCustomersStore((s) => s.customers);
+  const customersHasHydrated = useCustomersStore((s) => s.hasHydrated);
   const addTag = useCustomersStore((s) => s.addTag);
   const updateNotes = useCustomersStore((s) => s.updateNotes);
 
@@ -23,7 +24,23 @@ export default function CustomerProfilePage() {
   const [notesDraft, setNotesDraft] = useState(customer?.notes ?? "");
   const [notesSaved, setNotesSaved] = useState(false);
 
-  if (isChecking) {
+  // notesDraft's useState initializer only runs on mount — on that first
+  // render, persisted notes haven't loaded yet (customer?.notes reads the
+  // pre-hydration fixture value), and useState won't re-run its
+  // initializer once hydration completes. This resyncs it exactly once,
+  // right when hydration finishes — deliberately depending on
+  // customersHasHydrated rather than customer itself, so an unrelated
+  // update (e.g. adding a tag, which also changes customer's object
+  // reference) doesn't re-fire this and wipe out notes the seller has
+  // typed but not yet saved.
+  useEffect(() => {
+    if (customersHasHydrated && customer) {
+      setNotesDraft(customer.notes);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customersHasHydrated]);
+
+  if (isChecking || !customersHasHydrated) {
     return (
       <div className="flex items-center justify-center min-h-dvh">
         <div className="text-[12px] text-gl-text-secondary">Loading…</div>

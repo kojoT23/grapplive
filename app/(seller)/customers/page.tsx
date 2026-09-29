@@ -91,6 +91,7 @@ function CustomerRow({
 export default function CustomersPage() {
   const { isChecking } = useRequireAuth("sell");
   const customers = useCustomersStore((s) => s.customers);
+  const customersHasHydrated = useCustomersStore((s) => s.hasHydrated);
   const selectedIds = useCustomersStore((s) => s.selectedIds);
   const isSelectMode = useCustomersStore((s) => s.isSelectMode);
   const toggleSelectMode = useCustomersStore((s) => s.toggleSelectMode);
@@ -102,7 +103,7 @@ export default function CustomersPage() {
   const [messageDraft, setMessageDraft] = useState("");
   const [showComposer, setShowComposer] = useState(false);
 
-  if (isChecking) {
+  if (isChecking || !customersHasHydrated) {
     return (
       <div className="flex items-center justify-center min-h-dvh">
         <div className="text-[12px] text-gl-text-secondary">Loading…</div>
