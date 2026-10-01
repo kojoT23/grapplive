@@ -4,8 +4,13 @@ import { safeJSONStorage } from "@/lib/utils/safe-storage";
 import { getStoreBySellerId, type StoreSocials } from "@/lib/mock-data/stores";
 
 // Same "one seller's worth of data" prototype scope as the other stores
-// in this build (useBuyerRequestsStore, useProductsStore) — no real
-// auth/session yet, so this always represents s1.
+// in this build (useBuyerRequestsStore, useLiveSessionStore) — no real
+// auth/session yet, so this always represents s1. ROADMAP.md §1.1's
+// follow-up: unlike the other seller-facing stores, this one wasn't
+// migrated to the dynamic useCurrentSellerId() resolution — making it
+// properly per-seller needs the same keyed-by-id restructuring
+// useSellerIdentityStore got, deliberately left as a separate follow-up
+// rather than rushed alongside that change.
 const CURRENT_SELLER_ID = "s1";
 const seedStore = getStoreBySellerId(CURRENT_SELLER_ID);
 

@@ -1,9 +1,10 @@
-export type StoreSocials = {
-  whatsappNumber?: string;
-  instagramHandle?: string;
-  tiktokHandle?: string;
-  facebookHandle?: string;
-};
+import type { SellerSocials } from "./catalog";
+
+// Re-exported so existing `import { type StoreSocials } from ".../stores"`
+// call sites keep working unchanged — see ROADMAP.md §1.5, SellerSocials
+// in catalog.ts is now the one canonical shape for a seller's contact
+// handles, used by both Product and Store.
+export type StoreSocials = SellerSocials;
 
 export type Store = {
   sellerId: string;

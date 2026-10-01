@@ -10,12 +10,21 @@ export type ProductCategory =
   | "accessories"
   | "electronics";
 
+// ROADMAP.md §1.5: this used to exist in two shapes — SellerSocials here
+// (denormalized onto every CatalogProduct, for the buyer "Contact seller"
+// sheet) and a separate, differently-fielded StoreSocials in stores.ts
+// (for the storefront editor and Go Live's platform picker). One seller
+// has one set of contact handles; now there's one type for it, even
+// though the *data* is still denormalized in two places (Product and
+// Store) rather than one — that part depends on ROADMAP.md §1.2 (Seller
+// as its own record), not yet done.
 export type SellerSocials = {
   whatsappNumber?: string;
   signalNumber?: string;
   telegramHandle?: string;
   tiktokHandle?: string;
   instagramHandle?: string;
+  facebookHandle?: string;
 };
 
 export type VerifiedTier = "verified_producer" | "trusted_import" | "top_seller";
