@@ -107,15 +107,22 @@ notes about a buyer are private to your relationship with them. Worth
 deciding deliberately before a `customers` table gets designed around the
 wrong assumption.
 
-### 1.5 🔴 Seller contact info exists in two different shapes
-`SellerSocials` (whatsapp/signal/telegram/tiktok/instagram) is denormalized
-onto every `CatalogProduct`. `StoreSocials` (whatsapp/instagram/tiktok/
-facebook — a *different* field list) lives separately on `Store`. Two
-types, two sources of truth, for what's conceptually one seller's contact
-info. If a seller updates their WhatsApp number, neither is authoritative
-today. Needs: one `SellerContact`/`StoreSocials` shape, owned by `Store`
-(per 1.2, `Store`/`Seller` should be the source of truth other things
-reference, not the reverse), matching sub-fields.
+### 1.5 ✅ Resolved (type), still open (data) — seller contact info existed in two different shapes
+`SellerSocials` (whatsapp/signal/telegram/tiktok/instagram) was
+denormalized onto every `CatalogProduct`. `StoreSocials` (whatsapp/
+instagram/tiktok/facebook — a *different* field list) lived separately on
+`Store`. Fixed the type half: `StoreSocials` is now a type alias for
+`SellerSocials` (which gained `facebookHandle`), so there's one shape
+instead of two mismatched ones — the one existing import site
+(`useStoreProfileStore.ts`) didn't even need to change. *Commit: "Merge
+SellerSocials and StoreSocials into one type (ROADMAP.md §1.5)."*
+
+**Still open, same root cause as 1.2:** the *data* is still denormalized
+onto both `Product` and `Store` separately — if a seller updates their
+WhatsApp number today, neither copy is authoritative, just consistently
+shaped now. Properly fixing that means `Store`/`Seller` becoming the one
+source of truth other things reference, which depends on 1.2 (`Seller` as
+its own record) landing first.
 
 ---
 
