@@ -26,6 +26,7 @@ import {
   IconBroadcast,
 } from "@tabler/icons-react";
 import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
+import { useCurrentSellerId } from "@/lib/hooks/useCurrentSellerId";
 import { useBuyerRequestsStore, type BuyerRequest } from "@/lib/store/useBuyerRequestsStore";
 import { useStoreProfileStore } from "@/lib/store/useStoreProfileStore";
 import { useCatalogStore } from "@/lib/store/useCatalogStore";
@@ -35,12 +36,15 @@ import { getReviewsForProducts } from "@/lib/mock-data/reviews";
 import { SellerReplyModal } from "@/components/ui/SellerReplyModal";
 import { EditStorefrontSheet } from "@/components/ui/EditStorefrontSheet";
 
-// No real auth/session yet, so the logged-in seller is hardcoded to the
-// one real seller id ("s1", Ama's Fashion House) that both catalog.ts and
-// stores.ts already agree on — same placeholder-id pattern used elsewhere
-// in this build (e.g. payouts, product ids) until real auth exists.
-const CURRENT_SELLER_ID = "s1";
-
+// ROADMAP.md §1.1: the logged-in seller now resolves dynamically via
+// useCurrentSellerId (resolves to whichever seller identity the current
+// phone has, falling back to the demo seller "s1" if none exists yet —
+// see lib/store/useSellerIdentityStore.ts). getSellerById below still
+// only knows about seller identities baked into the static build
+// (currently just "s1", Ama's Fashion House) — see §1.2, not yet fixed —
+// so a genuinely new seller identity will see seller/store as undefined
+// here. That's handled with the `seller?.` fallbacks already throughout
+// this file; it's a known, documented gap, not a silent bug.
 const contentTabs = ["Home", "Products", "Collections", "Deals", "Reviews", "About"] as const;
 type ContentTab = (typeof contentTabs)[number];
 
@@ -223,11 +227,12 @@ function StarRow({ rating }: { rating: number }) {
 export default function SellerStorefrontPage() {
   const { isChecking } = useRequireAuth("sell");
   const router = useRouter();
+  const currentSellerId = useCurrentSellerId();
   const [activeTab, setActiveTab] = useState<ContentTab>("Home");
   const [showEditSheet, setShowEditSheet] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
 
-  const seller = getSellerById(CURRENT_SELLER_ID);
+  const seller = getSellerById(currentSellerId);
   const store = seller?.store;
 
   // Product data is reactive now (useCatalogStore), not the static
@@ -237,7 +242,7 @@ export default function SellerStorefrontPage() {
   const catalogHasHydrated = useCatalogStore((s) => s.hasHydrated);
   const catalogProducts = useCatalogStore((s) => s.products);
   const sellerProducts = catalogHasHydrated
-    ? catalogProducts.filter((p) => p.sellerId === CURRENT_SELLER_ID)
+    ? catalogProducts.filter((p) => p.sellerId === currentSellerId)
     : seller?.products ?? [];
 
   const sellerReviews = getReviewsForProducts(sellerProducts.map((p) => p.id));
@@ -296,7 +301,7 @@ export default function SellerStorefrontPage() {
   // as the desktop fallback, since navigator.share isn't implemented in
   // most desktop browsers.
   const handleShare = async () => {
-    const url = `${window.location.origin}/seller/${CURRENT_SELLER_ID}`;
+    const url = `${window.location.origin}/seller/${currentSellerId}`;
     if (navigator.share) {
       try {
         await navigator.share({ title: storeName, url });
@@ -349,7 +354,7 @@ export default function SellerStorefrontPage() {
           </span>
         </div>
         <Link
-          href={`/seller/${CURRENT_SELLER_ID}`}
+          href={`/seller/${currentSellerId}`}
           className="text-[11px] font-semibold text-gl-brand active:opacity-70 transition-opacity"
         >
           View store

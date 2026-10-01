@@ -5,13 +5,10 @@ import Link from "next/link";
 import { IconSearch, IconPlus } from "@tabler/icons-react";
 import { TabBar } from "@/components/ui/TabBar";
 import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
+import { useCurrentSellerId } from "@/lib/hooks/useCurrentSellerId";
 import { useCatalogStore } from "@/lib/store/useCatalogStore";
 import { sellerTabs } from "@/lib/nav/seller-tabs";
 import type { CatalogProduct, ProductStatus } from "@/lib/mock-data/catalog";
-
-// No real auth/session yet, so the logged-in seller is hardcoded — same
-// placeholder-id pattern used across this build (storefront, go-live).
-const CURRENT_SELLER_ID = "s1";
 
 function formatGHS(amount: number) {
   return `GHS ${amount.toLocaleString("en-GH")}`;
@@ -52,6 +49,7 @@ function ProductRow({ product }: { product: CatalogProduct }) {
 
 export default function ProductsPage() {
   const { isChecking } = useRequireAuth("sell");
+  const currentSellerId = useCurrentSellerId();
   const products = useCatalogStore((s) => s.products);
   const [query, setQuery] = useState("");
 
@@ -64,7 +62,7 @@ export default function ProductsPage() {
   }
 
   const filtered = products
-    .filter((p) => p.sellerId === CURRENT_SELLER_ID)
+    .filter((p) => p.sellerId === currentSellerId)
     .filter((p) => p.name.toLowerCase().includes(query.toLowerCase()));
 
   return (

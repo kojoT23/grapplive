@@ -8,6 +8,7 @@ import {
   type ProductStatus,
 } from "@/lib/mock-data/catalog";
 import { getSellerById } from "@/lib/mock-data/sellers";
+import { getCurrentSellerIdSync, useSellerIdentityStore, DEMO_SELLER_ID } from "@/lib/store/useSellerIdentityStore";
 
 // Replaces useProductsStore (lib/store/useProductsStore.ts, now deleted).
 // That store held a disconnected shadow copy of a seller's inventory
@@ -21,12 +22,10 @@ import { getSellerById } from "@/lib/mock-data/sellers";
 // updateProduct / deleteProduct. Seller CRUD pages and buyer-facing pages
 // both read from here now, so there's exactly one source of truth.
 //
-// Same "one seller's worth of data" prototype scope as the other stores
-// in this build (useBuyerRequestsStore, useStoreProfileStore,
-// useLiveSessionStore) — no real auth/session yet, so seller CRUD always
-// happens as CURRENT_SELLER_ID ("s1"). Client-side-only, same honest
-// "this device only" limitation as everything else here.
-const CURRENT_SELLER_ID = "s1";
+// ROADMAP.md §1.1: which seller a product belongs to now resolves
+// dynamically via getCurrentSellerIdSync (see
+// lib/store/useSellerIdentityStore.ts), not a hardcoded constant —
+// whoever is actually signed in as "Sell" owns the products they add.
 
 export type NewCatalogProductInput = {
   name: string;
@@ -66,23 +65,32 @@ function nextProductId(existing: CatalogProduct[]): string {
 }
 
 // Denormalized seller fields (name, orders completed, reply time, socials,
-// origin/verifiedTier/sourceType) come from the seller's existing fixture
-// record, the same way every other product in catalog.ts already carries
-// them — there's no separate Seller table. Sourced from the immutable
-// static fixtures (sellers.ts → catalog.ts), so it stays correct even if
-// every one of the seller's reactive products gets deleted.
+// origin/verifiedTier/sourceType) get stamped onto every product, the
+// same way every fixture product in catalog.ts already carries them —
+// there's no separate Seller table (see ROADMAP.md §1.2, not yet fixed).
+// name/ordersCompleted/replyTime come from useSellerIdentityStore — the
+// real identity created at signup, correct for both the demo seller and
+// a genuinely new one. origin/sellerSocials/verifiedTier/sourceType
+// aren't part of that lightweight identity record; those still come from
+// the demo seller's fixture product when sellerId is the demo seller
+// ("s1"), and use sensible new-seller defaults otherwise.
 function sellerTemplate() {
-  const seller = getSellerById(CURRENT_SELLER_ID);
-  const first = seller?.products[0];
+  const sellerId = getCurrentSellerIdSync();
+  const identity = Object.values(useSellerIdentityStore.getState().identitiesByPhone).find(
+    (i) => i.id === sellerId
+  );
+  const demoFirstProduct =
+    sellerId === DEMO_SELLER_ID ? getSellerById(DEMO_SELLER_ID)?.products[0] : undefined;
+
   return {
-    sellerId: CURRENT_SELLER_ID,
-    sellerName: seller?.name ?? "My Store",
-    sellerOrdersCompleted: seller?.ordersCompleted ?? 0,
-    sellerReplyTime: seller?.replyTime ?? "",
-    origin: first?.origin ?? ("third_party_seller" as const),
-    sellerSocials: first?.sellerSocials ?? {},
-    verifiedTier: first?.verifiedTier ?? null,
-    sourceType: first?.sourceType ?? ("marketplace" as const),
+    sellerId,
+    sellerName: identity?.name ?? "My Store",
+    sellerOrdersCompleted: identity?.ordersCompleted ?? 0,
+    sellerReplyTime: identity?.replyTime ?? "Usually within a day",
+    origin: demoFirstProduct?.origin ?? ("third_party_seller" as const),
+    sellerSocials: demoFirstProduct?.sellerSocials ?? {},
+    verifiedTier: demoFirstProduct?.verifiedTier ?? null,
+    sourceType: demoFirstProduct?.sourceType ?? ("marketplace" as const),
   };
 }
 

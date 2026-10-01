@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { IconArrowLeft, IconTrash } from "@tabler/icons-react";
 import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
+import { useCurrentSellerId } from "@/lib/hooks/useCurrentSellerId";
 import { useCatalogStore } from "@/lib/store/useCatalogStore";
 import { ProductImageUploader } from "@/components/ui/ProductImageUploader";
 import type { ProductCategory, ProductStatus } from "@/lib/mock-data/catalog";
@@ -28,19 +29,16 @@ const categoryOptions: { value: ProductCategory; label: string }[] = [
   { value: "electronics", label: "Electronics" },
 ];
 
-// No real auth/session yet, so the logged-in seller is hardcoded — same
-// placeholder-id pattern used across this build (storefront, go-live).
-const CURRENT_SELLER_ID = "s1";
-
 export default function EditProductPage() {
   const { isChecking } = useRequireAuth("sell");
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const currentSellerId = useCurrentSellerId();
   const products = useCatalogStore((s) => s.products);
   const updateProduct = useCatalogStore((s) => s.updateProduct);
   const deleteProduct = useCatalogStore((s) => s.deleteProduct);
 
-  const product = products.find((p) => p.id === params.id && p.sellerId === CURRENT_SELLER_ID);
+  const product = products.find((p) => p.id === params.id && p.sellerId === currentSellerId);
 
   const [name, setName] = useState("");
   const [priceGHS, setPriceGHS] = useState("");

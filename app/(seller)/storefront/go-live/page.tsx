@@ -17,10 +17,7 @@ import {
 import { useCatalogStore } from "@/lib/store/useCatalogStore";
 import { useStoreProfileStore } from "@/lib/store/useStoreProfileStore";
 import { useLiveSessionStore, type Platform as SessionPlatform } from "@/lib/store/useLiveSessionStore";
-
-// No real auth/session yet, so the logged-in seller is hardcoded — same
-// placeholder-id pattern used across this build (storefront, products).
-const CURRENT_SELLER_ID = "s1";
+import { useCurrentSellerId } from "@/lib/hooks/useCurrentSellerId";
 
 type Platform = "tiktok" | "instagram" | "facebook";
 
@@ -42,6 +39,7 @@ type ScheduledSession = {
 
 export default function GoLivePage() {
   const router = useRouter();
+  const currentSellerId = useCurrentSellerId();
   const products = useCatalogStore((s) => s.products);
   const productsHasHydrated = useCatalogStore((s) => s.hasHydrated);
 
@@ -83,7 +81,7 @@ export default function GoLivePage() {
   }, [sessionHasHydrated, existingSession, scheduled]);
 
   const pinnableProducts = products.filter(
-    (p) => p.sellerId === CURRENT_SELLER_ID && p.status === "live"
+    (p) => p.sellerId === currentSellerId && p.status === "live"
   );
   const selectedProduct = pinnableProducts.find((p) => p.id === productId) ?? null;
 
@@ -122,7 +120,7 @@ export default function GoLivePage() {
     setError(null);
     const product = products.find((p) => p.id === productId);
     scheduleSession({
-      sellerId: CURRENT_SELLER_ID,
+      sellerId: currentSellerId,
       date,
       time,
       productId,
