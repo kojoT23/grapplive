@@ -20,30 +20,43 @@ Each item is marked:
 
 ## 1. Identity & scoping — the critical section
 
-Everything in this section stems from one root cause: **the app has a real
+Everything in this section stems from one root cause: **the app had a real
 session layer (`useAppStore`: phone, OTP verification, `shop`/`sell`/
-`grapplive_staff` roles) that is completely disconnected from the
+`grapplive_staff` roles) that was completely disconnected from the
 Seller/Store/Product/Customer data layer.** Picking "Sell" at
-`/auth/role-selector` only sets `activeRole = "sell"` on the session — it
-never creates a `Seller` or `Store` record, and never links the verified
-phone number to a seller id. Meanwhile every seller-facing page
-(`/products`, `/storefront`, `/storefront/go-live`, `/dashboard`) hardcodes
-`const CURRENT_SELLER_ID = "s1"`, independent of who's actually signed in.
+`/auth/role-selector` used to only set `activeRole = "sell"` on the
+session — it never created a `Seller` record, and never linked the
+verified phone number to a seller id. Every seller-facing page
+(`/products`, `/storefront`, `/storefront/go-live`, `/dashboard`) hardcoded
+`const CURRENT_SELLER_ID = "s1"`, independent of who was actually signed
+in.
 
-**Practical consequence today:** any phone number that verifies and picks
-"Sell" lands inside the *same* seller's real dashboard and can edit/delete
-`s1`'s actual inventory. There is currently no per-seller data isolation
-in the frontend's own logic — this is not just "no backend yet," the
-client-side data flow itself doesn't distinguish sellers.
+**Status: 1.1 is now resolved** — a real, isolated seller identity gets
+created the moment a new phone picks "Sell." The product/catalog side of
+per-seller data isolation is fixed. What's still open is narrower: 1.2
+(`Seller` as its own backend-ready record, not reconstructed from a
+product) and the `useStoreProfileStore` per-seller follow-up noted under
+1.1.
 
-### 1.1 🔴 No Seller/Store record is created on signup
-`/auth/role-selector` → `addRole("sell")` never creates a `Seller` or
-`Store`. Needs: on first "Sell" selection, generate a real seller id tied
-to `useAppStore.phone`, create a `Store` record (via `useStoreProfileStore`
-or equivalent), and replace every hardcoded `CURRENT_SELLER_ID` with a
-derived "current authenticated seller" value. This is the fix that makes
-"add another seller" actually mean something in the frontend, ahead of any
-backend work.
+### 1.1 ✅ Resolved — no Seller record was created on signup
+`/auth/role-selector` → `addRole("sell")` used to never create a seller
+identity at all. Fixed: new `lib/store/useSellerIdentityStore.ts`, a
+persisted phone → seller id mapping, created the moment a phone picks
+"Sell" for the first time. The first phone to do so in a browser inherits
+the demo seller ("s1") and its fixture data, so nothing broke for
+existing sessions; any different phone after that gets a genuinely new,
+empty identity instead of silently sharing s1's data. Signup also gained
+the one field it was missing to make this real — a shop name, prompted
+for only when creating a new (non-demo) identity. Every hardcoded
+`CURRENT_SELLER_ID = "s1"` across the seller-facing pages now resolves
+dynamically via `useCurrentSellerId()` / `getCurrentSellerIdSync()`.
+*Commit: "Create a real seller identity on signup (ROADMAP.md §1.1)."*
+
+**Known follow-up, deliberately not done in the same pass:**
+`useStoreProfileStore` (about/socials/logo/banner) still only represents
+one seller — making it properly per-seller needs the same keyed-by-id
+treatment `useSellerIdentityStore` got, and doing it alongside everything
+else risked rushing it. Still open.
 
 ### 1.2 🔴 Seller identity is reconstructed from `Product[0]`, not its own record
 `sellers.ts`'s `getSellerById` filters `catalogProducts` by `sellerId` and
@@ -54,6 +67,23 @@ instead of the other way around. A seller with zero products (a normal
 state: brand new signup, or they delete everything) currently resolves to
 `undefined` — they stop existing. Needs: `Seller` as its own record;
 products reference it by id, never the reverse.
+
+**Partially addressed by 1.1, not fully:** a new seller's own
+`name`/`ordersCompleted`/`replyTime` now come from the real identity
+record (`useSellerIdentityStore`), not `Product[0]` — so a brand-new
+seller adding their first product correctly stamps their own name onto
+it, not "undefined" or s1's. `getSellerById` itself is unchanged, though,
+and still can't resolve a seller who exists only in
+`useSellerIdentityStore` with zero products yet. The seller-owned pages
+(their own `/storefront`, `/products`) already degrade gracefully via
+existing `seller?.` fallbacks. Their buyer-facing public profile
+(`/seller/[newId]`) will correctly 404 for now, and that specific part
+isn't a frontend bug to fix — a seller who only exists in their own
+browser's localStorage genuinely can't be visible to a buyer on a
+different device without a backend. That's the real remaining shape of
+this item: `getSellerById` reading from a real `Seller` table instead of
+`catalogProducts`, which only makes sense once that table exists
+server-side.
 
 ### 1.3 🔴 `Order` has no buyer identity field at all
 `Order`/`OrderGroup` (in `lib/mock-data/orders.ts`) have no `buyerId` or
@@ -217,20 +247,23 @@ users' localStorage has either spelling baked into it.
 
 1. **2.1 is done** — was the live bug, fixed first, ahead of everything
    else in this document.
-2. **Resolve section 1 before writing any backend schema** — specifically
-   1.1 (seller creation on signup) and 1.4's open design question
-   (global vs. per-seller `Customer`), since those are the two decisions
-   most likely to force a table redesign if made implicitly instead of
-   deliberately.
-3. **Section 4 items ride along with the backend migration itself** — not
+2. **1.1 is done** — real seller identity on signup, every seller page
+   scoped dynamically instead of hardcoded.
+3. **Resolve the rest of section 1 before writing any backend schema** —
+   specifically 1.2 (`Seller` as its own record) and 1.4's open design
+   question (global vs. per-seller `Customer`), since those are the two
+   remaining decisions most likely to force a table redesign if made
+   implicitly instead of deliberately. The `useStoreProfileStore`
+   follow-up noted under 1.1 belongs here too.
+4. **Section 4 items ride along with the backend migration itself** — not
    separate work, just don't port the client-generated-id scheme (4.2) or
    the fixture-number aggregates (4.3) as-is.
-4. **Section 3 stays deferred** exactly as your own phase list already
+5. **Section 3 stays deferred** exactly as your own phase list already
    sequences it — this document doesn't argue for reordering that.
-5. **Section 5 (cosmetic)** — whenever convenient, no urgency.
-6. **Section 8 items are already done** — listed for the record, not as
+6. **Section 5 (cosmetic)** — whenever convenient, no urgency.
+7. **Section 8 items are already done** — listed for the record, not as
    remaining work.
-7. **Section 9 needs your input, not more auditing** — each item there is
+8. **Section 9 needs your input, not more auditing** — each item there is
    a product decision (build it, or delete the dead UI), not something to
    guess at.
 
