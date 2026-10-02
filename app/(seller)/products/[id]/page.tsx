@@ -10,6 +10,12 @@ import { useCatalogStore } from "@/lib/store/useCatalogStore";
 import { ProductImageUploader } from "@/components/ui/ProductImageUploader";
 import type { ProductCategory, ProductStatus } from "@/lib/mock-data/catalog";
 
+// "Out of stock" is included here only so an already-out_of_stock
+// product's current status renders correctly in the dropdown — it's not
+// really a free manual choice. useCatalogStore enforces this on every
+// save (ROADMAP.md §2.2): picking it while stockCount > 0 gets corrected
+// back to "live" automatically, and a live product that runs out of
+// stock gets flipped to it automatically, whichever form was used.
 const statusOptions: { value: ProductStatus; label: string }[] = [
   { value: "live", label: "Live" },
   { value: "draft", label: "Draft" },

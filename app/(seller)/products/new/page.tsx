@@ -8,6 +8,10 @@ import { useCatalogStore } from "@/lib/store/useCatalogStore";
 import { ProductImageUploader } from "@/components/ui/ProductImageUploader";
 import type { ProductCategory, ProductStatus } from "@/lib/mock-data/catalog";
 
+// No "out_of_stock" option here on purpose — it's not a manual choice,
+// useCatalogStore derives and enforces it from stockCount on every save
+// (ROADMAP.md §2.2). Setting status "Live" with stockCount 0 here will
+// immediately normalize to out_of_stock.
 const statusOptions: { value: ProductStatus; label: string }[] = [
   { value: "live", label: "Live" },
   { value: "draft", label: "Draft" },

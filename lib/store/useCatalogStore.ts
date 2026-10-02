@@ -64,6 +64,26 @@ function nextProductId(existing: CatalogProduct[]): string {
   return `p${maxSuffix + 1}`;
 }
 
+// ROADMAP.md §2.2: status and stockCount used to be two independent
+// fields nothing kept in sync — a product could sit at stockCount: 0
+// while still marked status: "live", shown to buyers as purchasable when
+// it wasn't. This is the fix: "out of stock" is no longer something a
+// seller manually declares, it's derived and enforced here, on every
+// write, regardless of which form (or which future API) produced the
+// input. A live product that runs out of stock is automatically flipped
+// to out_of_stock; restocking it automatically flips it back to live.
+// draft/paused are untouched — those stay fully seller-controlled
+// regardless of stock level (e.g. pausing a listing you still have stock
+// for). This is also why the add-product and edit-product forms'
+// manually-selectable status options don't need to match each other on
+// out_of_stock — it's never meant to be a manual choice either way.
+function normalizeStatus(status: ProductStatus, stockCount: number | undefined): ProductStatus {
+  const inStock = (stockCount ?? 0) > 0;
+  if (status === "live" && !inStock) return "out_of_stock";
+  if (status === "out_of_stock" && inStock) return "live";
+  return status;
+}
+
 // Denormalized seller fields (name, orders completed, reply time, socials,
 // origin/verifiedTier/sourceType) get stamped onto every product, the
 // same way every fixture product in catalog.ts already carries them —
@@ -103,14 +123,23 @@ export const useCatalogStore = create<CatalogState>()(
 
       addProduct: (input) => {
         const id = nextProductId(get().products);
-        const newProduct: CatalogProduct = { id, ...sellerTemplate(), ...input };
+        const newProduct: CatalogProduct = {
+          id,
+          ...sellerTemplate(),
+          ...input,
+          status: normalizeStatus(input.status, input.stockCount),
+        };
         set((state) => ({ products: [newProduct, ...state.products] }));
         return id;
       },
 
       updateProduct: (id, input) =>
         set((state) => ({
-          products: state.products.map((p) => (p.id === id ? { ...p, ...input } : p)),
+          products: state.products.map((p) =>
+            p.id === id
+              ? { ...p, ...input, status: normalizeStatus(input.status, input.stockCount) }
+              : p
+          ),
         })),
 
       deleteProduct: (id) =>
