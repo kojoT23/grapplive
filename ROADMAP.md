@@ -31,11 +31,13 @@ verified phone number to a seller id. Every seller-facing page
 `const CURRENT_SELLER_ID = "s1"`, independent of who was actually signed
 in.
 
-**Status: 1.1 is now resolved** — a real, isolated seller identity gets
-created the moment a new phone picks "Sell." The product/catalog side of
-per-seller data isolation is fixed. What's still open is narrower: 1.2
-(`Seller` as its own backend-ready record, not reconstructed from a
-product) and the `useStoreProfileStore` per-seller follow-up noted under
+**Status: 1.1, 1.4, and 1.5 (type half) are resolved.** A real, isolated
+seller identity gets created the moment a new phone picks "Sell,"
+Customer records are properly per-seller, and seller contact info is one
+consistent shape. What's still open is narrower and mostly backend-
+blocked: 1.2 (`Seller` as its own backend-ready record), 1.3 (`Order`
+buyer identity — itself needed before 1.4's `orderHistory` can become
+real), and the `useStoreProfileStore` per-seller follow-up noted under
 1.1.
 
 ### 1.1 ✅ Resolved — no Seller record was created on signup
@@ -90,22 +92,31 @@ server-side.
 `buyerPhone` anywhere. Orders aren't scoped to anyone. Same root issue as
 1.1, mirrored on the buyer side.
 
-### 1.4 🔴 `Customer` (CRM) is disconnected from `Order` and unscoped to any seller
-`useCustomersStore`'s `Customer` type has its own hand-typed
-`orderHistory: CustomerOrder[]` field that duplicates order-shaped data
-instead of being *derived from* real `Order` rows — and per 1.3, there's
-currently no buyer id on `Order` to join against even if it tried. It's
-also not scoped to a seller at all (not even a hardcoded constant, unlike
-the other seller-facing stores) — there's no drawn boundary for "this
-seller's customers" vs. "that seller's customers."
+### 1.4 ✅ Design decision made and applied — `Customer` scoping
+**Decision:** per-seller, not global. Matches industry precedent exactly —
+Shopify, Etsy, and standard B2B CRM tools (Salesforce, HubSpot) all scope
+customer/contact data to one seller's relationship with a buyer, never
+shared across sellers on the same platform, even though the underlying
+buyer identity is shared. The reasoning carries over directly: privacy (a
+buyer's relationship with one business isn't every business's to see) and
+competitive separation (GRAPPlive sellers are often direct competitors —
+letting one see another's tags/notes on a shared buyer would hand over
+competitive intelligence). The buyer *identity* stays global — see 1.3 —
+it's the relationship data (tags, notes, this-seller's-view-of-their-order-
+history) that's per-seller.
 
-**Open design decision, not yet made either way:** is a `Customer` record
-global (one buyer, referenced by every seller who's sold to them) or
-per-seller (each seller's own private tags/notes about a buyer, layered on
-a shared underlying buyer identity)? Real CRM tools do the latter — your
-notes about a buyer are private to your relationship with them. Worth
-deciding deliberately before a `customers` table gets designed around the
-wrong assumption.
+**Applied:** `Customer` gained `sellerId`; `/customers` and
+`/customers/[id]` now scope and ownership-check against
+`useCurrentSellerId()`, same pattern as products. *Commit: "Scope Customer
+records to a seller (ROADMAP.md §1.4 decision applied)."*
+
+**Still open, and this is the real remaining shape of 1.2/1.4 together:**
+`useCustomersStore`'s `orderHistory` is still hand-typed fixture data, not
+derived from real `Order` rows — because per 1.3, `Order` has no buyer id
+to join against yet. A real `Customer` becomes a `(sellerId, buyerId)`
+pair with a *computed* view over that seller's real orders with that real
+buyer — not a stored `orderHistory` field at all. That depends on 1.3
+landing first, which depends on a backend existing.
 
 ### 1.5 ✅ Resolved (type), still open (data) — seller contact info existed in two different shapes
 `SellerSocials` (whatsapp/signal/telegram/tiktok/instagram) was
@@ -264,11 +275,10 @@ users' localStorage has either spelling baked into it.
 2. **1.1 is done** — real seller identity on signup, every seller page
    scoped dynamically instead of hardcoded.
 3. **Resolve the rest of section 1 before writing any backend schema** —
-   specifically 1.2 (`Seller` as its own record) and 1.4's open design
-   question (global vs. per-seller `Customer`), since those are the two
-   remaining decisions most likely to force a table redesign if made
-   implicitly instead of deliberately. The `useStoreProfileStore`
-   follow-up noted under 1.1 belongs here too.
+   specifically 1.2 (`Seller` as its own record), the backend-dependent
+   half of 1.4 (real `(sellerId, buyerId)`-derived order history, which
+   needs 1.3 first), and the `useStoreProfileStore` follow-up noted
+   under 1.1.
 4. **Section 4 items ride along with the backend migration itself** — not
    separate work, just don't port the client-generated-id scheme (4.2) or
    the fixture-number aggregates (4.3) as-is.
