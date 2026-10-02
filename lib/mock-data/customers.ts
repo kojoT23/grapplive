@@ -9,6 +9,16 @@ export type CustomerOrder = {
 
 export type Customer = {
   id: string;
+  // ROADMAP.md §1.4: a Customer is a per-seller relationship (tags/notes
+  // are this seller's private view of a buyer), not a platform-wide
+  // record — matches how Shopify, Etsy and standard B2B CRM tools all
+  // scope this (see the §1.4 discussion for the full reasoning). The
+  // underlying buyer identity itself is still shared/global — that part
+  // is ROADMAP.md §1.3 (Order has no buyer identity field yet), not this
+  // field. This is the structural piece buildable ahead of that: once a
+  // real buyer identity exists, pairing (sellerId, buyerId) is what a
+  // real Customer record becomes.
+  sellerId: string;
   name: string;
   segment: CustomerSegment;
   ordersCount: number;
@@ -22,6 +32,7 @@ export type Customer = {
 export const initialCustomers: Customer[] = [
   {
     id: "c1",
+    sellerId: "s1",
     name: "Abena Owusu",
     segment: "vip",
     ordersCount: 7,
@@ -36,6 +47,7 @@ export const initialCustomers: Customer[] = [
   },
   {
     id: "c2",
+    sellerId: "s1",
     name: "Kwesi Mensah",
     segment: "at_risk",
     ordersCount: 3,
@@ -49,6 +61,7 @@ export const initialCustomers: Customer[] = [
   },
   {
     id: "c3",
+    sellerId: "s1",
     name: "Yaw Boateng",
     segment: "repeat",
     ordersCount: 2,

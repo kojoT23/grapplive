@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { IconArrowLeft, IconCrown, IconPlus } from "@tabler/icons-react";
 import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
+import { useCurrentSellerId } from "@/lib/hooks/useCurrentSellerId";
 import { useCustomersStore } from "@/lib/store/useCustomersStore";
 
 function formatGHS(amount: number) {
@@ -14,12 +15,17 @@ export default function CustomerProfilePage() {
   const { isChecking } = useRequireAuth("sell");
   const router = useRouter();
   const params = useParams<{ id: string }>();
+  const currentSellerId = useCurrentSellerId();
   const customers = useCustomersStore((s) => s.customers);
   const customersHasHydrated = useCustomersStore((s) => s.hasHydrated);
   const addTag = useCustomersStore((s) => s.addTag);
   const updateNotes = useCustomersStore((s) => s.updateNotes);
 
-  const customer = customers.find((c) => c.id === params.id);
+  // sellerId check matters now that useCustomersStore holds every
+  // seller's customers in one array (same shape as useCatalogStore) —
+  // without it, a seller could view/edit another seller's private notes
+  // on a shared buyer just by guessing a customer id.
+  const customer = customers.find((c) => c.id === params.id && c.sellerId === currentSellerId);
   const [newTag, setNewTag] = useState("");
   const [notesDraft, setNotesDraft] = useState(customer?.notes ?? "");
   const [notesSaved, setNotesSaved] = useState(false);

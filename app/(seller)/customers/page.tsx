@@ -5,6 +5,7 @@ import Link from "next/link";
 import { IconSearch, IconCrown, IconMessageCircle, IconCheck } from "@tabler/icons-react";
 import { TabBar } from "@/components/ui/TabBar";
 import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
+import { useCurrentSellerId } from "@/lib/hooks/useCurrentSellerId";
 import { useCustomersStore } from "@/lib/store/useCustomersStore";
 import { sellerTabs } from "@/lib/nav/seller-tabs";
 import type { Customer, CustomerSegment } from "@/lib/mock-data/customers";
@@ -90,6 +91,7 @@ function CustomerRow({
 
 export default function CustomersPage() {
   const { isChecking } = useRequireAuth("sell");
+  const currentSellerId = useCurrentSellerId();
   const customers = useCustomersStore((s) => s.customers);
   const customersHasHydrated = useCustomersStore((s) => s.hasHydrated);
   const selectedIds = useCustomersStore((s) => s.selectedIds);
@@ -112,6 +114,7 @@ export default function CustomersPage() {
   }
 
   const filtered = customers.filter((c) => {
+    if (c.sellerId !== currentSellerId) return false;
     const matchesQuery = c.name.toLowerCase().includes(query.toLowerCase());
     const matchesFilter = filter === "all" || c.segment === filter;
     return matchesQuery && matchesFilter;
