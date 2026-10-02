@@ -141,13 +141,20 @@ would have locked onto the pre-hydration (empty) notes value and never
 resynced. *Commit: "Persist useCustomersStore — CRM tags/notes no longer
 lost on reload."*
 
-### 2.2 🟡 `status` and `stockCount` can silently disagree
-`CatalogProduct.status` (`live`/`draft`/`out_of_stock`/`paused`) is a field
-the seller manually picks; `stockCount` is a separate number nothing keeps
-in sync. A product can sit at `stockCount: 0` while still marked `status:
-"live"`. Also inconsistently exposed: the "add product" form doesn't offer
-`out_of_stock` as a choice, the "edit product" form does — a symptom of
-the underlying rule (manual vs. derived) not being decided yet.
+### 2.2 ✅ Resolved — `status` and `stockCount` could silently disagree
+`CatalogProduct.status` was a field the seller manually picked;
+`stockCount` a separate number nothing kept in sync — a product could sit
+at `stockCount: 0` while still marked `status: "live"`. Resolved the
+underlying question (manual vs. derived) in favor of derived:
+`useCatalogStore`'s `normalizeStatus` now enforces it on every write — a
+live product that hits zero stock auto-flips to `out_of_stock`,
+restocking auto-flips it back to `live`. `draft`/`paused` stay fully
+seller-controlled regardless of stock level. This also explains, rather
+than needing to fix, the other half of the original finding: the two
+forms' manually-selectable status options not matching is fine now that
+`out_of_stock` is never meant to be a manual choice on either one.
+*Commit: "status and stockCount can no longer silently disagree
+(ROADMAP.md §2.2)."*
 
 ---
 
