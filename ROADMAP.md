@@ -384,3 +384,44 @@ delivery cost? nothing yet?) — a product-scope question, not a wiring fix.
 by time range yet — wiring the dropdown to switch ranges wouldn't
 actually show different data today. Lower priority until there's real
 data behind it.
+
+---
+
+## 10. Test coverage
+
+### 10.1 ✅ Resolved — zero automated tests existed until this pass
+Every fix logged as ✅ in this document up to this point was verified by
+reading the code and running a manual `next build` — real verification,
+but it only holds up for one continuous session by one careful reviewer.
+It doesn't survive a team, a gap of months, or someone who didn't read
+the reasoning in this document touching the code later. Good
+documentation of *why* a decision was made (this file) isn't the same as
+*enforcement* that it stays true.
+
+Added Vitest + 37 tests, scoped deliberately to pure business-logic in
+the stores this session actually built or changed — not component/UI
+tests, which need heavier setup (testing-library, DOM rendering) for
+lower return at this stage:
+- `lib/utils/safe-storage.test.ts` — the §8.2 guarantee (a storage
+  failure degrades, never throws).
+- `lib/store/useCatalogStore.test.ts` — the §2.2 status/stockCount
+  normalization rule, in both directions.
+- `lib/store/useSellerIdentityStore.test.ts` — the §1.1
+  demo-seller-inheritance rule, specifically the actual bug it fixes (a
+  second phone must not inherit the first seller's identity).
+- `lib/store/useCustomersStore.test.ts` — tag/notes correctness, and that
+  `partialize` is actually excluding selection UI state from what's
+  written to storage, not just configured to look like it does.
+
+`npm test` runs the suite once (CI-style); `npm test:watch` for active
+development. *Commit: "Add a test suite — Vitest, 37 tests across the
+logic built this session."*
+
+**Not yet covered, real gaps:** component/UI tests (nothing rendering an
+actual page or form yet — a regression in, say, the product image
+uploader's slot logic wouldn't be caught by anything here), the
+seller-ownership checks added across `/products/[id]` and
+`/customers/[id]` (that a mismatched sellerId correctly returns "not
+found"), and no CI wiring yet — these tests only run when someone
+remembers to run `npm test` locally, which is the same "depends on a
+careful human" problem this section exists to start moving away from.
