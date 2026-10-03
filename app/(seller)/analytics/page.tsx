@@ -1,6 +1,6 @@
 "use client";
 
-import { IconChevronDown, IconAlertTriangle } from "@tabler/icons-react";
+import { IconAlertTriangle } from "@tabler/icons-react";
 import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
 import {
   revenueGHS7Day,
@@ -76,9 +76,16 @@ export default function AnalyticsPage() {
     <div className="pb-6">
       <div className="flex justify-between items-center px-3 md:px-5 pt-3.5 pb-1">
         <span className="text-[14px] font-semibold text-gl-text">Analytics</span>
-        <button className="text-[9px] text-gl-text-secondary bg-gl-bg-muted px-2 py-1 rounded-full flex items-center gap-1 active:bg-gl-border transition-colors">
-          Last 7 days <IconChevronDown size={10} />
-        </button>
+        {/* ROADMAP.md §9.3: this used to be a dropdown with no menu behind
+            it — picking a different range wouldn't have shown different
+            numbers anyway, since revenueGHS7Day etc. are static fixtures
+            with no real per-period data yet. A plain label is the honest
+            version of what's actually here; real period-switching can
+            come back once there's real timestamped order data to compute
+            different ranges from. */}
+        <span className="text-[9px] text-gl-text-secondary bg-gl-bg-muted px-2 py-1 rounded-full">
+          Last 7 days
+        </span>
       </div>
 
       <div className="px-3 md:px-5 pt-2 pb-1">

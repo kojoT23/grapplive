@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { IconSearch, IconMapPin, IconChevronRight } from "@tabler/icons-react";
+import { IconSearch, IconChevronRight } from "@tabler/icons-react";
 import { TabBar } from "@/components/ui/TabBar";
 import { ProductCard } from "@/components/ui/ProductCard";
 import { buyerTabs } from "@/lib/nav/buyer-tabs";
 import { spotlightSellers, liveSessions, categories } from "@/lib/mock-data/home";
 import { catalogProducts } from "@/lib/mock-data/catalog";
+import { HomeLocationButton } from "./HomeLocationButton";
 
 export default function HomePage() {
   return (
@@ -17,10 +18,7 @@ export default function HomePage() {
           <IconSearch size={14} />
           Search GRAPPlive
         </Link>
-        <button className="flex items-center gap-1 text-[11px] font-semibold text-gl-text active:opacity-60 transition-opacity">
-          <IconMapPin size={13} />
-          Accra
-        </button>
+        <HomeLocationButton />
       </div>
 
       <p className="px-3 md:px-5 pb-1 pt-1 text-[12px] text-gl-text">

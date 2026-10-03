@@ -1,12 +1,43 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { IconHeart, IconMessageCircle, IconShare } from "@tabler/icons-react";
+import { IconHeart, IconHeartFilled, IconMessageCircle, IconShare } from "@tabler/icons-react";
 import { getProductById } from "@/lib/mock-data/catalog";
 
+// ROADMAP.md §9.1: this page is still a single static mockup story, not
+// a real feed — that larger question (build it out vs. retire it) wasn't
+// settled, so the page itself is untouched. What WAS a clear call: the
+// "1.2k" / "86" engagement counts next to Heart/Comment were hardcoded,
+// fabricated numbers, not tied to anything real — exactly the
+// "unnecessary social gamification" AGENTS.md §35 warns against. Removed
+// them rather than build out a fake-but-bigger version. Heart is now a
+// genuinely honest per-viewer toggle (makes no claim about anyone else's
+// behavior); Share reuses the real native-share pattern already built
+// for the storefront; Comment has no onClick — there's no comment system
+// to honestly back it, so it stays a plain icon rather than a dead
+// button pretending otherwise.
 export default function DiscoverPage() {
   const router = useRouter();
   const featuredProduct = getProductById("p2");
+  const [liked, setLiked] = useState(false);
+
+  const handleShare = async () => {
+    const url = `${window.location.origin}/discover`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "GRAPPlive", url });
+      } catch {
+        // User dismissed the native share sheet — not an error.
+      }
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      // Clipboard blocked — nothing more useful to do client-side.
+    }
+  };
 
   return (
     <div className="bg-[#1A1A18] min-h-dvh relative">
@@ -26,15 +57,20 @@ export default function DiscoverPage() {
       </div>
 
       <div className="absolute right-3 bottom-[130px] flex flex-col gap-3.5 items-center">
-        <button className="text-center active:scale-90 transition-transform">
-          <IconHeart size={22} className="text-white mx-auto" />
-          <div className="text-[9px] text-white">1.2k</div>
+        <button
+          onClick={() => setLiked((v) => !v)}
+          className="text-center active:scale-90 transition-transform"
+        >
+          {liked ? (
+            <IconHeartFilled size={22} className="text-gl-brand mx-auto" />
+          ) : (
+            <IconHeart size={22} className="text-white mx-auto" />
+          )}
         </button>
         <button className="text-center active:scale-90 transition-transform">
           <IconMessageCircle size={20} className="text-white mx-auto" />
-          <div className="text-[9px] text-white">86</div>
         </button>
-        <button className="active:scale-90 transition-transform">
+        <button onClick={handleShare} className="active:scale-90 transition-transform">
           <IconShare size={20} className="text-white" />
         </button>
       </div>
