@@ -361,29 +361,43 @@ not localStorage, once a backend exists.
 
 Full-app sweep for `<button>` elements with no `onClick`. Five buttons
 found (ProductActions.tsx's three are covered in 8.5, resolved by
-deletion, not listed again here). Each of the following needs a product
-decision, not a default guess — none were touched.
+deletion, not listed again here). All three remaining items below are
+now resolved — two by explicit decision, one by a direction given.
 
-### 9.1 🟢 `/discover` — Heart/Comment/Share are dead on a single-story mockup
-The whole page is one hardcoded "Adjoa Beauty" story with no real feed
-behind it — not just these three buttons. Wiring up a fake like counter
-wasn't done on purpose: a fabricated "1.2k likes" is exactly the
-"unnecessary social gamification" AGENTS.md §35 already warns against.
-**Needs a decision:** is `/discover` becoming a real short-video feed, or
-was it a design exploration not actually on the roadmap? That decides
-build-it vs. delete-it.
+### 9.1 ✅ Resolved — `/discover`'s fake engagement numbers
+The "1.2k" likes / "86" comments next to Heart/Comment were hardcoded,
+fabricated numbers — exactly the "unnecessary social gamification"
+AGENTS.md §35 warns against. Removed them. Heart is now a genuinely
+honest per-viewer toggle (makes no claim about anyone else's behavior);
+Share reuses the real native-share pattern already built for the
+storefront; Comment has no `onClick` — there's no comment system to
+honestly back it, so it stays a plain icon rather than a dead button
+pretending otherwise. *Commit: "Resolve all three ROADMAP.md §9 items —
+real GPS location, two honest fixes."*
 
-### 9.2 🟢 Home page's "Accra" button — dead location selector
-No delivery-location switching exists behind it. Likely a real feature
-for a Ghana-wide marketplace, but building it means deciding which
-cities/areas are supported and what it actually affects (search results?
-delivery cost? nothing yet?) — a product-scope question, not a wiring fix.
+**Still open, deliberately not decided here:** whether `/discover`
+becomes a real short-video feed or gets retired — that's a bigger product
+call than the fake-numbers fix, and wasn't part of what was settled.
 
-### 9.3 🟢 Analytics "Last 7 days" dropdown — dead, and would show the same numbers if wired up
-`revenueGHS7Day` and friends are static fixture numbers with no variation
-by time range yet — wiring the dropdown to switch ranges wouldn't
-actually show different data today. Lower priority until there's real
-data behind it.
+### 9.2 ✅ Resolved — home page's "Accra" button is now real GPS-based location
+**Direction given:** automatic detection via GPS, reflecting that
+delivery can't cover everywhere at once. Built exactly that:
+`lib/mock-data/serviceAreas.ts` holds the real, grounded set of areas
+(Accra, Tema, Kumasi, Tamale — the exact union already present across
+every seller's `Store.deliveryAreas`, not an invented list), matched via
+haversine distance with an 80km coverage radius. Outside that radius is
+honestly shown as out-of-coverage, not silently snapped to the nearest
+city anyway. `useLocationStore.ts` persists the result; denied/
+unsupported/out-of-coverage GPS all fall back to a manual picker of the 4
+known areas.
+
+### 9.3 ✅ Resolved — analytics date-range dropdown
+Converted to a plain label. Wiring up a real dropdown would have shown
+the same numbers regardless of what's picked — `revenueGHS7Day` and
+friends are static fixtures with no per-period data yet — so a label is
+the honest version of what's actually there. Real period-switching can
+come back once there's real timestamped order data to compute different
+ranges from.
 
 ---
 
