@@ -355,6 +355,46 @@ approach the quota. Real fix stays what section 1/4.2 already say: images
 belong in real object storage (S3-compatible / Cloudinary) with a CDN,
 not localStorage, once a backend exists.
 
+### 8.7 ✅ Resolved — five lists rendered unbounded
+Found in the frontend-vs-market-players audit: the home page's full
+catalog grid, search results, category pages, the seller's CRM customer
+list, and the seller's own product list all rendered their entire array
+at once. Harmless at ~13 fixture products; a real problem at the catalog
+size this product is meant to reach. Fixed with `usePagedList` (20 per
+page, "Load more") — shared hook, shared `LoadMoreButton`, and a shared
+`PagedProductGrid` for the three buyer-facing pages. Deliberately simple
+client-side slicing, not virtualization — real virtualization or
+server-side paging only makes sense once a backend serves genuinely paged
+data. *Commit: "Paginate every unbounded list render (20 per page, Load
+more)."* Not covered by an automated test (hook testing needs
+`@testing-library/react`, same gap as §10.1).
+
+### 8.8 🟢 Not fixable yet — placeholder product photos
+Outside photos a seller has uploaded since the photo feature shipped,
+every product renders the woven-texture placeholder. Against Jumia /
+TikTok Shop / Instagram Shopping — fundamentally visual-first — this is
+the single biggest appearance gap. It's a content problem, not a code
+one: the upload capability exists (see 8.1). It needs real seller
+photos. Deliberately not "fixed" with stock imagery: that would
+misrepresent what's actually being sold, and raises its own sourcing
+problems.
+
+### 8.9 🟢 Not fixable yet — `next/image` runs `unoptimized`
+Most `<Image>` usages pass `unoptimized`, bypassing Next's resizing and
+format conversion. Unavoidable while photos are base64 data URLs in
+`localStorage` — nothing exists to optimize *to*. Resolves with 8.6 once
+real image hosting exists, at which point the flag should come off.
+
+### 8.10 ⚪ Checked, no action needed — typography
+Audited because tallying font sizes showed ~600 usages at 9-12px. Checked
+the surface that matters: `ProductCard`'s price renders at 15px bold and
+the product name at 11.5px (two-line clamped), in line with compact
+grid-card conventions on comparable apps. The very small text is mostly
+seller-dashboard labels/metadata, where it's less of a problem. No
+change made — "fixing" it without an identified problem risked a visual
+regression for no gain. Worth a lighter design pass eventually; not a
+defect.
+
 ---
 
 ## 9. UI completeness — buttons with no handler
