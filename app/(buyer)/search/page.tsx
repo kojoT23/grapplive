@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { IconArrowLeft, IconSearch, IconX } from "@tabler/icons-react";
-import { ProductCard } from "@/components/ui/ProductCard";
+import { PagedProductGrid } from "@/components/ui/PagedProductGrid";
 import { catalogProducts } from "@/lib/mock-data/catalog";
 
 export default function SearchPage() {
@@ -55,11 +55,7 @@ export default function SearchPage() {
           <div className="px-3 md:px-5 pb-2 text-[10px] text-gl-text-secondary">
             {results.length} result{results.length === 1 ? "" : "s"}
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3 px-3 md:px-5">
-            {results.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
+          <PagedProductGrid products={results} />
         </>
       )}
     </div>

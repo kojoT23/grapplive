@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { IconSearch, IconChevronRight } from "@tabler/icons-react";
 import { TabBar } from "@/components/ui/TabBar";
-import { ProductCard } from "@/components/ui/ProductCard";
+import { PagedProductGrid } from "@/components/ui/PagedProductGrid";
 import { buyerTabs } from "@/lib/nav/buyer-tabs";
 import { spotlightSellers, liveSessions, categories } from "@/lib/mock-data/home";
 import { catalogProducts } from "@/lib/mock-data/catalog";
@@ -115,10 +115,8 @@ export default function HomePage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3 px-3 md:px-5 pb-3">
-        {catalogProducts.map((product) => (
-          <ProductCard key={product.id} product={product} />
-        ))}
+      <div className="pb-3">
+        <PagedProductGrid products={catalogProducts} />
       </div>
 
       <TabBar tabs={buyerTabs} activeHref="/home" />

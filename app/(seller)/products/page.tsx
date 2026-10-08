@@ -6,6 +6,8 @@ import { IconSearch, IconPlus } from "@tabler/icons-react";
 import { TabBar } from "@/components/ui/TabBar";
 import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
 import { useCurrentSellerId } from "@/lib/hooks/useCurrentSellerId";
+import { usePagedList } from "@/lib/hooks/usePagedList";
+import { LoadMoreButton } from "@/components/ui/LoadMoreButton";
 import { useCatalogStore } from "@/lib/store/useCatalogStore";
 import { sellerTabs } from "@/lib/nav/seller-tabs";
 import type { CatalogProduct, ProductStatus } from "@/lib/mock-data/catalog";
@@ -53,6 +55,13 @@ export default function ProductsPage() {
   const products = useCatalogStore((s) => s.products);
   const [query, setQuery] = useState("");
 
+  // Computed (and paged) above the early return — usePagedList is a hook,
+  // so it must run on every render in the same order.
+  const filtered = products
+    .filter((p) => p.sellerId === currentSellerId)
+    .filter((p) => p.name.toLowerCase().includes(query.toLowerCase()));
+  const { visible: visibleProducts, hasMore, loadMore } = usePagedList(filtered);
+
   if (isChecking) {
     return (
       <div className="flex items-center justify-center min-h-dvh">
@@ -60,10 +69,6 @@ export default function ProductsPage() {
       </div>
     );
   }
-
-  const filtered = products
-    .filter((p) => p.sellerId === currentSellerId)
-    .filter((p) => p.name.toLowerCase().includes(query.toLowerCase()));
 
   return (
     <div className="pb-16">
@@ -95,8 +100,9 @@ export default function ProductsPage() {
             {query ? `No products match "${query}"` : "No products yet."}
           </div>
         ) : (
-          filtered.map((product) => <ProductRow key={product.id} product={product} />)
+          visibleProducts.map((product) => <ProductRow key={product.id} product={product} />)
         )}
+        {hasMore && <LoadMoreButton onClick={loadMore} />}
       </div>
 
       <TabBar tabs={sellerTabs} activeHref="/products" />

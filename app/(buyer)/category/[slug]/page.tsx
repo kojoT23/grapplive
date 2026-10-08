@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { IconArrowLeft } from "@tabler/icons-react";
-import { ProductCard } from "@/components/ui/ProductCard";
+import { PagedProductGrid } from "@/components/ui/PagedProductGrid";
 import { getProductsByCategory } from "@/lib/mock-data/catalog";
 
 function capitalize(str: string) {
@@ -25,11 +25,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
           No products in this category yet.
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3 px-3 md:px-5">
-          {products.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
+        <PagedProductGrid products={products} />
       )}
     </div>
   );

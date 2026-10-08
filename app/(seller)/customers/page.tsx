@@ -6,6 +6,8 @@ import { IconSearch, IconCrown, IconMessageCircle, IconCheck } from "@tabler/ico
 import { TabBar } from "@/components/ui/TabBar";
 import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
 import { useCurrentSellerId } from "@/lib/hooks/useCurrentSellerId";
+import { usePagedList } from "@/lib/hooks/usePagedList";
+import { LoadMoreButton } from "@/components/ui/LoadMoreButton";
 import { useCustomersStore } from "@/lib/store/useCustomersStore";
 import { sellerTabs } from "@/lib/nav/seller-tabs";
 import type { Customer, CustomerSegment } from "@/lib/mock-data/customers";
@@ -105,6 +107,17 @@ export default function CustomersPage() {
   const [messageDraft, setMessageDraft] = useState("");
   const [showComposer, setShowComposer] = useState(false);
 
+  // Computed (and paged) above the early return below — usePagedList is a
+  // hook, so it has to run on every render in the same order, not after a
+  // conditional return.
+  const filtered = customers.filter((c) => {
+    if (c.sellerId !== currentSellerId) return false;
+    const matchesQuery = c.name.toLowerCase().includes(query.toLowerCase());
+    const matchesFilter = filter === "all" || c.segment === filter;
+    return matchesQuery && matchesFilter;
+  });
+  const { visible: visibleCustomers, hasMore, loadMore } = usePagedList(filtered);
+
   if (isChecking || !customersHasHydrated) {
     return (
       <div className="flex items-center justify-center min-h-dvh">
@@ -112,13 +125,6 @@ export default function CustomersPage() {
       </div>
     );
   }
-
-  const filtered = customers.filter((c) => {
-    if (c.sellerId !== currentSellerId) return false;
-    const matchesQuery = c.name.toLowerCase().includes(query.toLowerCase());
-    const matchesFilter = filter === "all" || c.segment === filter;
-    return matchesQuery && matchesFilter;
-  });
 
   const pills: { key: FilterPill; label: React.ReactNode }[] = [
     { key: "all", label: `All (${customers.length})` },
@@ -182,7 +188,7 @@ export default function CustomersPage() {
             No customers match.
           </div>
         ) : (
-          filtered.map((customer) => (
+          visibleCustomers.map((customer) => (
             <CustomerRow
               key={customer.id}
               customer={customer}
@@ -192,6 +198,7 @@ export default function CustomersPage() {
             />
           ))
         )}
+        {hasMore && <LoadMoreButton onClick={loadMore} />}
       </div>
 
       {isSelectMode && selectedIds.size > 0 && !showComposer && (
