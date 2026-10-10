@@ -12,8 +12,8 @@ import {
   IconExternalLink,
 } from "@tabler/icons-react";
 import { getSellerById } from "@/lib/mock-data/sellers";
-import { getProductById } from "@/lib/mock-data/catalog";
 import { useLiveSessionStore, type Platform } from "@/lib/store/useLiveSessionStore";
+import { useCatalogStore } from "@/lib/store/useCatalogStore";
 
 const platformConfig: Record<
   Platform,
@@ -48,15 +48,18 @@ export default function LiveHandoffPage() {
   const session = useLiveSessionStore((s) => s.session);
   const sessionHasHydrated = useLiveSessionStore((s) => s.hasHydrated);
 
+  const catalogProducts = useCatalogStore((s) => s.products);
+
   const hasSessionForThisSeller = session && session.sellerId === sellerId;
 
-  // The product pinned at schedule time comes from the seller's own
-  // inventory (useProductsStore), which isn't unified with the buyer
-  // catalog (catalog.ts) yet — see the note in useLiveSessionStore.ts.
-  // Resolve it defensively: if it doesn't exist in the buyer catalog,
-  // fall back to the name captured at schedule time instead of a dead link.
+  // Resolved against the reactive catalog store (not the static fixture
+  // list) so a product the seller created after the app shipped — the
+  // exact case the Go Live picker now offers — still gets a working
+  // "View product" link. Still defensive: if the product was deleted
+  // since scheduling, fall back to the name captured at schedule time
+  // instead of a dead link.
   const pinnedCatalogProduct = hasSessionForThisSeller
-    ? getProductById(session.productId)
+    ? catalogProducts.find((p) => p.id === session.productId)
     : undefined;
 
   return (

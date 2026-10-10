@@ -48,12 +48,9 @@ export const useLiveSessionStore = create<LiveSessionState>()(
 );
 
 // productName is denormalized (stored at schedule time) rather than looked
-// up fresh. useCatalogStore/catalog.ts are unified now (products added via
-// /products/new are real CatalogProducts, not a disconnected shadow copy),
-// but the buyer-facing /live/[id] page still resolves the pinned product
-// through the static catalog.ts snapshot rather than the reactive store —
-// so a session pinning a product created after that snapshot was read
-// still won't resolve there. Denormalizing means the name always displays
-// correctly regardless; the "View product" link is best-effort and may
-// 404 for a newly-created product until /live/[id] is wired to the
-// reactive store too.
+// up fresh, so the name still displays correctly if the product is
+// deleted or renamed after scheduling — same snapshot-at-the-time idea as
+// OrderItem.itemName. /live/[id] resolves the pinned product against the
+// reactive useCatalogStore, so products created after the app shipped get
+// a working "View product" link too; if the product no longer exists, it
+// falls back to this stored name rather than a dead link.
