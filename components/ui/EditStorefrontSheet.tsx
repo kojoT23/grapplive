@@ -11,7 +11,7 @@ import {
   IconPhoto,
   IconTrash,
 } from "@tabler/icons-react";
-import { useStoreProfileStore } from "@/lib/store/useStoreProfileStore";
+import { useCurrentStoreProfile } from "@/lib/hooks/useCurrentStoreProfile";
 import { MAX_IMAGE_BYTES, compressImageFile } from "@/lib/utils/image-upload";
 
 function ImageUploadRow({
@@ -89,14 +89,8 @@ export function EditStorefrontSheet({
   isOpen: boolean;
   onClose: () => void;
 }) {
-  const about = useStoreProfileStore((s) => s.about);
-  const socials = useStoreProfileStore((s) => s.socials);
-  const logoDataUrl = useStoreProfileStore((s) => s.logoDataUrl);
-  const bannerDataUrl = useStoreProfileStore((s) => s.bannerDataUrl);
-  const updateAbout = useStoreProfileStore((s) => s.updateAbout);
-  const updateSocials = useStoreProfileStore((s) => s.updateSocials);
-  const updateLogo = useStoreProfileStore((s) => s.updateLogo);
-  const updateBanner = useStoreProfileStore((s) => s.updateBanner);
+  const { about, socials, logoDataUrl, bannerDataUrl, updateAbout, updateSocials, updateLogo, updateBanner } =
+    useCurrentStoreProfile();
 
   const [aboutInput, setAboutInput] = useState(about);
   const [whatsapp, setWhatsapp] = useState(socials.whatsappNumber ?? "");

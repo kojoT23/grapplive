@@ -15,7 +15,7 @@ import {
   IconExternalLink,
 } from "@tabler/icons-react";
 import { useCatalogStore } from "@/lib/store/useCatalogStore";
-import { useStoreProfileStore } from "@/lib/store/useStoreProfileStore";
+import { useCurrentStoreProfile } from "@/lib/hooks/useCurrentStoreProfile";
 import { useLiveSessionStore, type Platform as SessionPlatform } from "@/lib/store/useLiveSessionStore";
 import { useCurrentSellerId } from "@/lib/hooks/useCurrentSellerId";
 
@@ -43,8 +43,7 @@ export default function GoLivePage() {
   const products = useCatalogStore((s) => s.products);
   const productsHasHydrated = useCatalogStore((s) => s.hasHydrated);
 
-  const socialsHasHydrated = useStoreProfileStore((s) => s.hasHydrated);
-  const socials = useStoreProfileStore((s) => s.socials);
+  const { hasHydrated: socialsHasHydrated, socials } = useCurrentStoreProfile();
 
   const existingSession = useLiveSessionStore((s) => s.session);
   const scheduleSession = useLiveSessionStore((s) => s.scheduleSession);

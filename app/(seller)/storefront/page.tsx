@@ -28,7 +28,7 @@ import {
 import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
 import { useCurrentSellerId } from "@/lib/hooks/useCurrentSellerId";
 import { useBuyerRequestsStore, type BuyerRequest } from "@/lib/store/useBuyerRequestsStore";
-import { useStoreProfileStore } from "@/lib/store/useStoreProfileStore";
+import { useCurrentStoreProfile } from "@/lib/hooks/useCurrentStoreProfile";
 import { useCatalogStore } from "@/lib/store/useCatalogStore";
 import { getSellerById } from "@/lib/mock-data/sellers";
 import { type CatalogProduct } from "@/lib/mock-data/catalog";
@@ -251,11 +251,13 @@ export default function SellerStorefrontPage() {
   // edits (including uploaded images) persist across reloads.
   // hasHydrated guards against showing an empty/seed value flash before
   // localStorage rehydrates.
-  const profileHasHydrated = useStoreProfileStore((s) => s.hasHydrated);
-  const profileAbout = useStoreProfileStore((s) => s.about);
-  const profileSocials = useStoreProfileStore((s) => s.socials);
-  const logoDataUrl = useStoreProfileStore((s) => s.logoDataUrl);
-  const bannerDataUrl = useStoreProfileStore((s) => s.bannerDataUrl);
+  const {
+    hasHydrated: profileHasHydrated,
+    about: profileAbout,
+    socials: profileSocials,
+    logoDataUrl,
+    bannerDataUrl,
+  } = useCurrentStoreProfile();
   const displayAbout = profileHasHydrated ? profileAbout : store?.about ?? "";
   const displaySocials = profileHasHydrated ? profileSocials : store?.socials ?? {};
   const displayLogo = profileHasHydrated ? logoDataUrl : null;
