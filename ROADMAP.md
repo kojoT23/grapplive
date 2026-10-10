@@ -34,11 +34,10 @@ in.
 **Status: 1.1, 1.4, and 1.5 (type half) are resolved.** A real, isolated
 seller identity gets created the moment a new phone picks "Sell,"
 Customer records are properly per-seller, and seller contact info is one
-consistent shape. What's still open is narrower and mostly backend-
-blocked: 1.2 (`Seller` as its own backend-ready record), 1.3 (`Order`
-buyer identity — itself needed before 1.4's `orderHistory` can become
-real), and the `useStoreProfileStore` per-seller follow-up noted under
-1.1.
+consistent shape, and the storefront profile (about/socials/logo/banner)
+is per-seller too. What's still open is narrower and backend-blocked:
+1.2 (`Seller` as its own backend-ready record) and 1.3 (`Order` buyer
+identity — itself needed before 1.4's `orderHistory` can become real).
 
 ### 1.1 ✅ Resolved — no Seller record was created on signup
 `/auth/role-selector` → `addRole("sell")` used to never create a seller
@@ -54,11 +53,24 @@ for only when creating a new (non-demo) identity. Every hardcoded
 dynamically via `useCurrentSellerId()` / `getCurrentSellerIdSync()`.
 *Commit: "Create a real seller identity on signup (ROADMAP.md §1.1)."*
 
-**Known follow-up, deliberately not done in the same pass:**
-`useStoreProfileStore` (about/socials/logo/banner) still only represents
-one seller — making it properly per-seller needs the same keyed-by-id
-treatment `useSellerIdentityStore` got, and doing it alongside everything
-else risked rushing it. Still open.
+**Follow-up, now also resolved:** `useStoreProfileStore` (about/socials/
+logo/banner) still only represented one seller after the pass above — a
+second seller on the same device would have seen and overwritten the
+first one's storefront profile. It was left open deliberately, and was
+then wrongly described as needing a backend; it doesn't, it's client-side
+keying exactly like `useSellerIdentityStore`. Fixed: state is now
+`profiles: Record<sellerId, ...>`, components read it through
+`useCurrentStoreProfile()`, and persisted data migrated (version 1) so
+anyone with the old flat shape keeps their edits under the demo seller.
+8 tests cover seeding, per-seller isolation and the migration. *Commit:
+"Make the storefront profile store per-seller (ROADMAP.md §1.1
+follow-up)."*
+
+**Also closed, same area:** `/live/[id]` used to resolve a session's
+pinned product from the static fixture list, so a product created after
+the app shipped got no working "View product" link on the buyer's side.
+It now resolves against the reactive catalog store. *Commit: "/live/[id]
+resolves its pinned product from the reactive catalog store."*
 
 ### 1.2 🔴 Seller identity is reconstructed from `Product[0]`, not its own record
 `sellers.ts`'s `getSellerById` filters `catalogProducts` by `sellerId` and
@@ -277,8 +289,7 @@ users' localStorage has either spelling baked into it.
 3. **Resolve the rest of section 1 before writing any backend schema** —
    specifically 1.2 (`Seller` as its own record), the backend-dependent
    half of 1.4 (real `(sellerId, buyerId)`-derived order history, which
-   needs 1.3 first), and the `useStoreProfileStore` follow-up noted
-   under 1.1.
+   needs 1.3 first). The `useStoreProfileStore` follow-up is done.
 4. **Section 4 items ride along with the backend migration itself** — not
    separate work, just don't port the client-generated-id scheme (4.2) or
    the fixture-number aggregates (4.3) as-is.
@@ -452,7 +463,7 @@ the reasoning in this document touching the code later. Good
 documentation of *why* a decision was made (this file) isn't the same as
 *enforcement* that it stays true.
 
-Added Vitest + 37 tests, scoped deliberately to pure business-logic in
+Added Vitest + 37 tests (45 now), scoped deliberately to pure business-logic in
 the stores this session actually built or changed — not component/UI
 tests, which need heavier setup (testing-library, DOM rendering) for
 lower return at this stage:
@@ -466,8 +477,11 @@ lower return at this stage:
 - `lib/store/useCustomersStore.test.ts` — tag/notes correctness, and that
   `partialize` is actually excluding selection UI state from what's
   written to storage, not just configured to look like it does.
+- `lib/store/useStoreProfileStore.test.ts` (added later, 8 tests) — the
+  per-seller storefront profile: seeding, isolation between sellers, and
+  the migration from the old single-seller shape.
 
-`npm test` runs the suite once (CI-style); `npm test:watch` for active
+`npm test` runs the suite once (CI-style); `npm run test:watch` for active
 development. *Commit: "Add a test suite — Vitest, 37 tests across the
 logic built this session."*
 
