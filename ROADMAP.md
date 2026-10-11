@@ -66,6 +66,24 @@ anyone with the old flat shape keeps their edits under the demo seller.
 "Make the storefront profile store per-seller (ROADMAP.md §1.1
 follow-up)."*
 
+**Correction — scoping gaps found afterwards.** The line above that every
+seller page resolves dynamically was true of the hardcoded id, not of what
+the pages display. Testing the per-seller profile turned up three pages
+that still showed other sellers' data: `/orders` (every seller's groups,
+plus GrappStore's), the buyer-request list on `/storefront` (any seller
+could see and reply to any request), and a new seller's own shop name,
+which was stored at signup but never shown. All three fixed — orders and
+requests now filter by the signed-in seller, and `useCurrentSellerName()`
+supplies the name. *Commit: "Scope /orders, buyer requests and the shop
+name to the signed-in seller."*
+
+**Still open from that audit:** `usePayoutsStore` has no seller concept —
+one balance, one MoMo number and one history shared by every seller. It
+is mock settlement (see §6), so no real money is involved, but a second
+seller would see and could "withdraw" the first seller's balance. Needs
+the same keyed-by-seller treatment the profile store got, plus a
+migration.
+
 **Also closed, same area:** `/live/[id]` used to resolve a session's
 pinned product from the static fixture list, so a product created after
 the app shipped got no working "View product" link on the buyer's side.
