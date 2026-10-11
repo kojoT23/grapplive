@@ -13,3 +13,13 @@ export function useCurrentSellerId(): string {
   const identity = useSellerIdentityStore((s) => (phone ? s.identitiesByPhone[phone] : undefined));
   return identity?.id ?? DEMO_SELLER_ID;
 }
+
+// The shop name the signed-in seller entered at signup (or, for the demo
+// seller, their fixture name). getSellerById can't supply this for a
+// seller created at runtime — it only knows sellers baked into the static
+// fixtures — so a new seller's own storefront would otherwise fall back
+// to a generic "My Store" and never show the name they just typed.
+export function useCurrentSellerName(): string | undefined {
+  const phone = useAppStore((s) => s.phone);
+  return useSellerIdentityStore((s) => (phone ? s.identitiesByPhone[phone]?.name : undefined));
+}

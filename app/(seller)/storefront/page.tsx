@@ -26,7 +26,7 @@ import {
   IconBroadcast,
 } from "@tabler/icons-react";
 import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
-import { useCurrentSellerId } from "@/lib/hooks/useCurrentSellerId";
+import { useCurrentSellerId, useCurrentSellerName } from "@/lib/hooks/useCurrentSellerId";
 import { useBuyerRequestsStore, type BuyerRequest } from "@/lib/store/useBuyerRequestsStore";
 import { useCurrentStoreProfile } from "@/lib/hooks/useCurrentStoreProfile";
 import { useCatalogStore } from "@/lib/store/useCatalogStore";
@@ -228,6 +228,7 @@ export default function SellerStorefrontPage() {
   const { isChecking } = useRequireAuth("sell");
   const router = useRouter();
   const currentSellerId = useCurrentSellerId();
+  const identityName = useCurrentSellerName();
   const [activeTab, setActiveTab] = useState<ContentTab>("Home");
   const [showEditSheet, setShowEditSheet] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
@@ -275,7 +276,10 @@ export default function SellerStorefrontPage() {
     return Array.from(counts.entries()).map(([category, count]) => ({ category, count }));
   })();
 
-  const requests = useBuyerRequestsStore((s) => s.requests);
+  // The store holds requests for every seller; only this seller's own
+  // belong on their storefront (and only they should be able to reply).
+  const allRequests = useBuyerRequestsStore((s) => s.requests);
+  const requests = allRequests.filter((r) => r.sellerId === currentSellerId);
   const markReplied = useBuyerRequestsStore((s) => s.markReplied);
   const [replyTarget, setReplyTarget] = useState<BuyerRequest | null>(null);
 
@@ -321,7 +325,7 @@ export default function SellerStorefrontPage() {
     }
   };
 
-  const storeName = seller?.name ?? "My Store";
+  const storeName = identityName ?? seller?.name ?? "My Store";
   const deliveryAreas = store?.deliveryAreas ?? [];
   const visibleAreas = deliveryAreas.slice(0, 2);
   const extraAreaCount = deliveryAreas.length - visibleAreas.length;

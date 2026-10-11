@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { TabBar } from "@/components/ui/TabBar";
 import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
+import { useCurrentSellerId } from "@/lib/hooks/useCurrentSellerId";
 import { useOrdersStore } from "@/lib/store/useOrdersStore";
 import { sellerTabs } from "@/lib/nav/seller-tabs";
 import { flattenGroups, groupTotal, type FlatOrderGroup, type OrderStatus } from "@/lib/mock-data/orders";
@@ -142,6 +143,7 @@ function OrderCard({
 
 export default function OrdersPage() {
   const { isChecking } = useRequireAuth("sell");
+  const currentSellerId = useCurrentSellerId();
   const orders = useOrdersStore((s) => s.orders);
   const confirmPayment = useOrdersStore((s) => s.confirmPayment);
   const requestDelivery = useOrdersStore((s) => s.requestDelivery);
@@ -157,7 +159,9 @@ export default function OrdersPage() {
     );
   }
 
-  const groups = flattenGroups(orders);
+  // flattenGroups returns every seller's groups (and GrappStore's); a seller's
+  // own orders page should only ever show their own.
+  const groups = flattenGroups(orders).filter((g) => g.sellerId === currentSellerId);
   const needsActionCount = groups.filter((g) => NEEDS_ACTION_STATUSES.includes(g.status)).length;
 
   const filteredGroups = groups.filter((g) => {
