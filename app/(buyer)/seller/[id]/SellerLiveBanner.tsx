@@ -1,5 +1,6 @@
 "use client";
 
+import { useNow } from "@/lib/hooks/useNow";
 import Link from "next/link";
 import { IconBroadcast } from "@tabler/icons-react";
 import { useLiveSessionStore } from "@/lib/store/useLiveSessionStore";
@@ -10,12 +11,13 @@ import { useLiveSessionStore } from "@/lib/store/useLiveSessionStore";
 export function SellerLiveBanner({ sellerId }: { sellerId: string }) {
   const session = useLiveSessionStore((s) => s.session);
   const hasHydrated = useLiveSessionStore((s) => s.hasHydrated);
+  const now = useNow();
 
   if (!hasHydrated) return null;
   if (!session || session.sellerId !== sellerId) return null;
 
   const dateTime = new Date(`${session.date}T${session.time}`);
-  const isUpcoming = dateTime.getTime() > Date.now();
+  const isUpcoming = dateTime.getTime() > now;
 
   return (
     <Link

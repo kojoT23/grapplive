@@ -26,7 +26,11 @@ function trendPoints(values: number[]) {
 function PieChart({ slices }: { slices: typeof revenueBreakdown }) {
   const radius = 16;
   const circumference = 2 * Math.PI * radius;
-  let cumulative = 0;
+  // Each slice starts where the previous ones end. Computed up front rather
+  // than accumulated inside the render loop (react-hooks/immutability).
+  const startPercents = slices.map((_, i) =>
+    slices.slice(0, i).reduce((sum, s) => sum + s.percent, 0)
+  );
 
   return (
     <svg width="90" height="90" viewBox="0 0 36 36">
@@ -38,10 +42,9 @@ function PieChart({ slices }: { slices: typeof revenueBreakdown }) {
         stroke="var(--color-gl-bg-muted)"
         strokeWidth="8"
       />
-      {slices.map((slice) => {
+      {slices.map((slice, i) => {
         const dash = (slice.percent / 100) * circumference;
-        const offset = circumference - (cumulative / 100) * circumference;
-        cumulative += slice.percent;
+        const offset = circumference - (startPercents[i] / 100) * circumference;
         return (
           <circle
             key={slice.label}

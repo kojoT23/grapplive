@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   IconArrowLeft,
@@ -62,22 +62,23 @@ export default function GoLivePage() {
   const [showProductPicker, setShowProductPicker] = useState(false);
   const [showPlatformPicker, setShowPlatformPicker] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [scheduled, setScheduled] = useState<ScheduledSession | null>(null);
+  const [scheduledLocal, setScheduled] = useState<ScheduledSession | null>(null);
 
   // If a session is already scheduled (persisted from a previous visit to
   // this page), show the confirmation view for it instead of a blank form.
-  // Runs as an effect, not during render, so it doesn't fight React's
-  // hydration pass the way a bare in-render setState would.
-  useEffect(() => {
-    if (sessionHasHydrated && existingSession && !scheduled) {
-      setScheduled({
-        date: existingSession.date,
-        time: existingSession.time,
-        productId: existingSession.productId,
-        platform: existingSession.platform,
-      });
-    }
-  }, [sessionHasHydrated, existingSession, scheduled]);
+  // Derived during render from the persisted session rather than copied into
+  // state by an effect; the local state only holds a session scheduled
+  // during this visit, which takes priority.
+  const scheduled: ScheduledSession | null =
+    scheduledLocal ??
+    (sessionHasHydrated && existingSession
+      ? {
+          date: existingSession.date,
+          time: existingSession.time,
+          productId: existingSession.productId,
+          platform: existingSession.platform,
+        }
+      : null);
 
   const pinnableProducts = products.filter(
     (p) => p.sellerId === currentSellerId && p.status === "live"

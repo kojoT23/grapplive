@@ -13,6 +13,7 @@ import {
 } from "@tabler/icons-react";
 import { getSellerById } from "@/lib/mock-data/sellers";
 import { useLiveSessionStore, type Platform } from "@/lib/store/useLiveSessionStore";
+import { useNow } from "@/lib/hooks/useNow";
 import { useCatalogStore } from "@/lib/store/useCatalogStore";
 
 const platformConfig: Record<
@@ -43,6 +44,7 @@ export default function LiveHandoffPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const sellerId = params.id;
+  const now = useNow();
 
   const seller = getSellerById(sellerId);
   const session = useLiveSessionStore((s) => s.session);
@@ -104,7 +106,7 @@ export default function LiveHandoffPage() {
                 : "facebookHandle"
           ];
           const dateTime = new Date(`${session.date}T${session.time}`);
-          const isUpcoming = dateTime.getTime() > Date.now();
+          const isUpcoming = dateTime.getTime() > now;
 
           return (
             <div className="flex flex-col items-center text-center pt-6">

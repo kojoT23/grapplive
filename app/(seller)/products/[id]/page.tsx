@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { IconArrowLeft, IconTrash } from "@tabler/icons-react";
@@ -55,7 +55,12 @@ export default function EditProductPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  useEffect(() => {
+  // Copy the product into the form fields on first sight of it and whenever
+  // it changes. Done by comparing against the last product seen during
+  // render, not in an effect (react-hooks/set-state-in-effect).
+  const [syncedProduct, setSyncedProduct] = useState<typeof product | null>(null);
+  if (product !== syncedProduct && (product || syncedProduct)) {
+    setSyncedProduct(product ?? null);
     if (product) {
       setName(product.name);
       setPriceGHS(String(product.priceGHS));
@@ -64,7 +69,7 @@ export default function EditProductPage() {
       setCategory(product.category);
       setImages(product.images ?? []);
     }
-  }, [product]);
+  }
 
   if (isChecking) {
     return (

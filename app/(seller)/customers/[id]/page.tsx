@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { IconArrowLeft, IconCrown, IconPlus } from "@tabler/icons-react";
 import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
@@ -39,12 +39,11 @@ export default function CustomerProfilePage() {
   // update (e.g. adding a tag, which also changes customer's object
   // reference) doesn't re-fire this and wipe out notes the seller has
   // typed but not yet saved.
-  useEffect(() => {
-    if (customersHasHydrated && customer) {
-      setNotesDraft(customer.notes);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [customersHasHydrated]);
+  const [notesSynced, setNotesSynced] = useState(false);
+  if (customersHasHydrated && !notesSynced) {
+    setNotesSynced(true);
+    if (customer) setNotesDraft(customer.notes);
+  }
 
   if (isChecking || !customersHasHydrated) {
     return (
