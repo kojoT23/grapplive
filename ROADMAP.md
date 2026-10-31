@@ -77,12 +77,15 @@ requests now filter by the signed-in seller, and `useCurrentSellerName()`
 supplies the name. *Commit: "Scope /orders, buyer requests and the shop
 name to the signed-in seller."*
 
-**Still open from that audit:** `usePayoutsStore` has no seller concept —
-one balance, one MoMo number and one history shared by every seller. It
-is mock settlement (see §6), so no real money is involved, but a second
-seller would see and could "withdraw" the first seller's balance. Needs
-the same keyed-by-seller treatment the profile store got, plus a
-migration.
+**Also closed, same audit:** `usePayoutsStore` used to hold one balance,
+one MoMo number and one history shared by every seller, so a second seller
+could see and "withdraw" the first seller's balance. It's now keyed by
+seller id (read via `useCurrentPayouts()`), the demo seller starts from the
+fixtures, a new seller starts empty with no MoMo number, and a first number
+is set directly (unverified) while changing an existing one still goes
+through the 24h cooling-off. Old flat localStorage data migrates under the
+demo seller. Covered by `lib/store/usePayoutsStore.test.ts`. *Commit:
+"Scope payouts to a seller (ROADMAP.md §1 follow-up)."*
 
 **Also closed, same area:** `/live/[id]` used to resolve a session's
 pinned product from the static fixture list, so a product created after
@@ -498,6 +501,10 @@ lower return at this stage:
 - `lib/store/useStoreProfileStore.test.ts` (added later, 8 tests) — the
   per-seller storefront profile: seeding, isolation between sellers, and
   the migration from the old single-seller shape.
+- `lib/store/usePayoutsStore.test.ts` (10 tests) — per-seller payouts:
+  seeding, a new seller never seeing the demo seller's balance, isolation
+  of payout requests and MoMo changes, first-number vs cooling-off, and
+  the migration from the old flat shape.
 
 `npm test` runs the suite once (CI-style); `npm run test:watch` for active
 development. *Commit: "Add a test suite — Vitest, 37 tests across the

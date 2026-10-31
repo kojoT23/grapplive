@@ -5,7 +5,7 @@ import { IconRosetteDiscountCheck, IconClock, IconX } from "@tabler/icons-react"
 import { TabBar } from "@/components/ui/TabBar";
 import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
 import { sellerTabs } from "@/lib/nav/seller-tabs";
-import { usePayoutsStore } from "@/lib/store/usePayoutsStore";
+import { useCurrentPayouts } from "@/lib/hooks/useCurrentPayouts";
 import { type PayoutRecord } from "@/lib/mock-data/payouts";
 
 function formatGHS(amount: number) {
@@ -45,12 +45,8 @@ function PayoutRow({ record }: { record: PayoutRecord }) {
 export default function PayoutsPage() {
   const { isChecking } = useRequireAuth("sell");
 
-  const balanceGHS = usePayoutsStore((s) => s.balanceGHS);
-  const momoDetails = usePayoutsStore((s) => s.momoDetails);
-  const history = usePayoutsStore((s) => s.history);
-  const hasHydrated = usePayoutsStore((s) => s.hasHydrated);
-  const requestPayout = usePayoutsStore((s) => s.requestPayout);
-  const updateMomoNumber = usePayoutsStore((s) => s.updateMomoNumber);
+  const { balanceGHS, momoDetails, history, hasHydrated, requestPayout, updateMomoNumber } =
+    useCurrentPayouts();
 
   const [showConfirmPayout, setShowConfirmPayout] = useState(false);
   const [isEditingMomo, setIsEditingMomo] = useState(false);
@@ -134,7 +130,9 @@ export default function PayoutsPage() {
         ) : (
           <div className="flex justify-between items-center">
             <span className="text-[12px] text-gl-text flex items-center gap-1">
-              {momoDetails.numberMasked}
+              {momoDetails.numberMasked || (
+                <span className="text-gl-text-secondary">No number added yet</span>
+              )}
               {momoDetails.isVerified && (
                 <IconRosetteDiscountCheck size={13} className="text-gl-green" />
               )}
@@ -143,7 +141,7 @@ export default function PayoutsPage() {
               onClick={() => setIsEditingMomo(true)}
               className="text-[9px] font-semibold text-gl-brand active:opacity-70 transition-opacity"
             >
-              Change
+              {momoDetails.numberMasked ? "Change" : "Add"}
             </button>
           </div>
         )}
@@ -167,9 +165,11 @@ export default function PayoutsPage() {
 
       <h2 className="px-3 md:px-5 pb-1 text-[11px] font-semibold text-gl-text">Payout history</h2>
       <div className="px-3 md:px-5">
-        {history.map((record) => (
-          <PayoutRow key={record.id} record={record} />
-        ))}
+        {history.length === 0 ? (
+          <p className="text-[10px] text-gl-text-secondary py-2">No payouts yet.</p>
+        ) : (
+          history.map((record) => <PayoutRow key={record.id} record={record} />)
+        )}
       </div>
 
       {showConfirmPayout && (
