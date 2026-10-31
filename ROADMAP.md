@@ -87,6 +87,15 @@ through the 24h cooling-off. Old flat localStorage data migrates under the
 demo seller. Covered by `lib/store/usePayoutsStore.test.ts`. *Commit:
 "Scope payouts to a seller (ROADMAP.md §1 follow-up)."*
 
+**Also closed, same audit:** `useLiveSessionStore` held a single scheduled
+session for the whole device, so a second seller opening the go-live page
+saw the first seller's session, and scheduling their own silently
+overwrote it. It's now keyed by seller id (one slot per seller); the buyer
+live page and the seller-page banner read the slot for the seller id in
+their URL. An old saved session migrates into its own seller's slot.
+Covered by `lib/store/useLiveSessionStore.test.ts`. *Commit: "Scope live
+sessions to a seller."*
+
 **Also closed, same area:** `/live/[id]` used to resolve a session's
 pinned product from the static fixture list, so a product created after
 the app shipped got no working "View product" link on the buyer's side.
@@ -501,6 +510,9 @@ lower return at this stage:
 - `lib/store/useStoreProfileStore.test.ts` (added later, 8 tests) — the
   per-seller storefront profile: seeding, isolation between sellers, and
   the migration from the old single-seller shape.
+- `lib/store/useLiveSessionStore.test.ts` (7 tests) — per-seller live
+  sessions: isolation, clearing, rescheduling, and the migration from the
+  old single-session shape.
 - `lib/store/usePayoutsStore.test.ts` (10 tests) — per-seller payouts:
   seeding, a new seller never seeing the demo seller's balance, isolation
   of payout requests and MoMo changes, first-number vs cooling-off, and

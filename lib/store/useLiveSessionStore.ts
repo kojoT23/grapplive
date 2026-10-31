@@ -2,13 +2,12 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { safeJSONStorage } from "@/lib/utils/safe-storage";
 
-// Same "one seller's worth of data" prototype scope as useCatalogStore,
-// useStoreProfileStore, useBuyerRequestsStore — no real auth/session yet,
-// so scheduling always happens as CURRENT_SELLER_ID ("s1"). Kept as an
-// explicit sellerId field (rather than a bare boolean/session object) so
-// the buyer-facing /live/[id] page can check it against the id in its own
-// URL, and this doesn't silently break the moment real multi-seller auth
-// exists — it'll just start being true per-seller instead of only for s1.
+// Keyed by seller id, one scheduled session per seller. This store used to
+// hold a single session for the whole device, so a second seller opening
+// the go-live page saw the first seller's session, and scheduling their own
+// silently overwrote it. Now each seller has their own slot, same idea as
+// useStoreProfileStore / usePayoutsStore. The buyer-facing /live/[id] page
+// and the seller-page banner read the slot for the seller id in their URL.
 export type Platform = "tiktok" | "instagram" | "facebook";
 
 export type LiveSession = {
@@ -21,25 +20,45 @@ export type LiveSession = {
 };
 
 type LiveSessionState = {
-  session: LiveSession | null;
+  sessions: Record<string, LiveSession>;
   hasHydrated: boolean;
   setHasHydrated: (value: boolean) => void;
+  // Stored under session.sellerId.
   scheduleSession: (session: LiveSession) => void;
-  clearSession: () => void;
+  clearSession: (sellerId: string) => void;
 };
+
+// Version 0 was the old single-session shape ({ session }). A saved session
+// already carries its own sellerId, so it moves straight into that
+// seller's slot and nothing is lost.
+export function migrateLiveSessions(persisted: unknown, version: number) {
+  if (version >= 1) return persisted as Pick<LiveSessionState, "sessions">;
+  const old = (persisted ?? {}) as { session?: LiveSession | null };
+  if (!old.session) return { sessions: {} };
+  return { sessions: { [old.session.sellerId]: old.session } };
+}
 
 export const useLiveSessionStore = create<LiveSessionState>()(
   persist(
     (set) => ({
-      session: null,
+      sessions: {},
       hasHydrated: false,
       setHasHydrated: (value) => set({ hasHydrated: value }),
-      scheduleSession: (session) => set({ session }),
-      clearSession: () => set({ session: null }),
+      scheduleSession: (session) =>
+        set((state) => ({ sessions: { ...state.sessions, [session.sellerId]: session } })),
+      clearSession: (sellerId) =>
+        set((state) => {
+          const rest = { ...state.sessions };
+          delete rest[sellerId];
+          return { sessions: rest };
+        }),
     }),
     {
       name: "grapplive-live-session",
       storage: safeJSONStorage,
+      version: 1,
+      migrate: migrateLiveSessions,
+      partialize: (state) => ({ sessions: state.sessions }),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
       },

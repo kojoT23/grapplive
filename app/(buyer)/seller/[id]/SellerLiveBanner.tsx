@@ -9,12 +9,12 @@ import { useLiveSessionStore } from "@/lib/store/useLiveSessionStore";
 // page.tsx is a Server Component, but the live session lives in a
 // localStorage-backed Zustand store, which only exists on the client.
 export function SellerLiveBanner({ sellerId }: { sellerId: string }) {
-  const session = useLiveSessionStore((s) => s.session);
+  const session = useLiveSessionStore((s) => s.sessions[sellerId]);
   const hasHydrated = useLiveSessionStore((s) => s.hasHydrated);
   const now = useNow();
 
   if (!hasHydrated) return null;
-  if (!session || session.sellerId !== sellerId) return null;
+  if (!session) return null;
 
   const dateTime = new Date(`${session.date}T${session.time}`);
   const isUpcoming = dateTime.getTime() > now;

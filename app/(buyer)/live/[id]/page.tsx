@@ -47,12 +47,12 @@ export default function LiveHandoffPage() {
   const now = useNow();
 
   const seller = getSellerById(sellerId);
-  const session = useLiveSessionStore((s) => s.session);
+  const session = useLiveSessionStore((s) => s.sessions[sellerId]);
   const sessionHasHydrated = useLiveSessionStore((s) => s.hasHydrated);
 
   const catalogProducts = useCatalogStore((s) => s.products);
 
-  const hasSessionForThisSeller = session && session.sellerId === sellerId;
+  const hasSessionForThisSeller = session !== undefined;
 
   // Resolved against the reactive catalog store (not the static fixture
   // list) so a product the seller created after the app shipped — the

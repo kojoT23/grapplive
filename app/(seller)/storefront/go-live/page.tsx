@@ -45,7 +45,7 @@ export default function GoLivePage() {
 
   const { hasHydrated: socialsHasHydrated, socials } = useCurrentStoreProfile();
 
-  const existingSession = useLiveSessionStore((s) => s.session);
+  const existingSession = useLiveSessionStore((s) => s.sessions[currentSellerId]);
   const scheduleSession = useLiveSessionStore((s) => s.scheduleSession);
   const clearSession = useLiveSessionStore((s) => s.clearSession);
   const sessionHasHydrated = useLiveSessionStore((s) => s.hasHydrated);
@@ -131,7 +131,7 @@ export default function GoLivePage() {
   };
 
   const handleCancelScheduled = () => {
-    clearSession();
+    clearSession(currentSellerId);
     setScheduled(null);
     setDay("");
     setMonth("");
