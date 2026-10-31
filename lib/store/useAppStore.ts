@@ -9,7 +9,11 @@ import { safeJSONStorage } from "@/lib/utils/safe-storage";
 // exclusive UI *modes* a person switches between, but grapplive_staff is
 // a standing *permission* — holding it shouldn't depend on, or affect,
 // which mode you're currently browsing in.
-type Role = "shop" | "sell" | "grapplive_staff";
+//
+// "deliver" (rider) is a mode like "shop"/"sell": the rider app is a
+// different set of screens you switch into, backed by its own identity
+// (useRiderIdentityStore), not a permission layered on top of another mode.
+type Role = "shop" | "sell" | "deliver" | "grapplive_staff";
 
 type AppState = {
   phone: string;

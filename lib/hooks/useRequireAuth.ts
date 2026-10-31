@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAppStore } from "@/lib/store/useAppStore";
 
-export function useRequireAuth(requiredRole?: "shop" | "sell" | "grapplive_staff") {
+export function useRequireAuth(requiredRole?: "shop" | "sell" | "deliver" | "grapplive_staff") {
   const router = useRouter();
   const isVerified = useAppStore((s) => s.isVerified);
   const roles = useAppStore((s) => s.roles);
@@ -23,7 +23,7 @@ export function useRequireAuth(requiredRole?: "shop" | "sell" | "grapplive_staff
       return;
     }
     if (requiredRole) {
-      // "shop"/"sell" are mutually exclusive modes — you check whether
+      // "shop"/"sell"/"deliver" are mutually exclusive modes — you check whether
       // that's the mode you're currently in. "grapplive_staff" is a
       // standing permission — you check whether you hold it at all,
       // independent of whatever shop/sell mode is currently active. This
@@ -34,7 +34,9 @@ export function useRequireAuth(requiredRole?: "shop" | "sell" | "grapplive_staff
         requiredRole === "grapplive_staff" ? roles.includes(requiredRole) : activeRole === requiredRole;
 
       if (!isAuthorized) {
-        router.replace(activeRole === "sell" ? "/dashboard" : "/home");
+        router.replace(
+          activeRole === "sell" ? "/dashboard" : activeRole === "deliver" ? "/rider" : "/home"
+        );
       }
     }
   }, [hasHydrated, isVerified, roles, activeRole, requiredRole, router]);

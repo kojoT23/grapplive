@@ -4,6 +4,12 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAppStore } from "@/lib/store/useAppStore";
 import { useSellerIdentityStore } from "@/lib/store/useSellerIdentityStore";
+import {
+  useRiderIdentityStore,
+  riderVehicles,
+  type RiderVehicle,
+} from "@/lib/store/useRiderIdentityStore";
+import { serviceAreas } from "@/lib/mock-data/serviceAreas";
 import { IconShoppingBag, IconBuildingStore, IconMotorbike, IconCircleCheck, IconCircle } from "@tabler/icons-react";
 
 export default function RoleSelectorPage() {
@@ -30,12 +36,34 @@ export default function RoleSelectorPage() {
 
   const isNewSeller = activeRole === "sell" && !identitiesByPhone[phone];
 
+  // Same idea for riders: a phone that has never picked "Deliver" needs a
+  // name, a vehicle and an area before it has a rider identity (the rider
+  // app is keyed by that identity). A phone that already has one skips
+  // straight to /rider.
+  const riderIdentitiesByPhone = useRiderIdentityStore((s) => s.identitiesByPhone);
+  const getOrCreateRiderId = useRiderIdentityStore((s) => s.getOrCreateRiderId);
+  const [showRiderPrompt, setShowRiderPrompt] = useState(false);
+  const [riderName, setRiderName] = useState("");
+  const [riderVehicle, setRiderVehicle] = useState<RiderVehicle>("motorbike");
+  const [riderArea, setRiderArea] = useState(serviceAreas[0].name);
+  const [riderNameError, setRiderNameError] = useState("");
+
+  const isNewRider = activeRole === "deliver" && !riderIdentitiesByPhone[phone];
+
   const goToDashboard = (name: string) => {
     getOrCreateSellerId(phone, name);
     router.push("/dashboard");
   };
 
   const handleContinue = () => {
+    if (activeRole === "deliver") {
+      if (isNewRider) {
+        setShowRiderPrompt(true);
+        return;
+      }
+      router.push("/rider");
+      return;
+    }
     if (activeRole === "sell") {
       if (isNewSeller) {
         setShowShopNamePrompt(true);
@@ -54,6 +82,73 @@ export default function RoleSelectorPage() {
     }
     goToDashboard(shopName);
   };
+
+  const handleCreateRider = () => {
+    if (!riderName.trim()) {
+      setRiderNameError("Enter your name");
+      return;
+    }
+    getOrCreateRiderId(phone, { name: riderName, vehicle: riderVehicle, area: riderArea });
+    router.push("/rider");
+  };
+
+  if (showRiderPrompt) {
+    const chip = (selected: boolean) =>
+      `flex-1 border rounded-lg py-2 text-[11px] font-semibold transition-colors active:scale-[0.98] ${
+        selected ? "border-gl-brand border-[1.5px] text-gl-brand" : "border-gl-border text-gl-text"
+      }`;
+    return (
+      <div className="px-5 pt-7 pb-5">
+        <h2 className="text-[14px] font-semibold text-gl-text mb-1">Set up your rider profile</h2>
+        <p className="text-[10px] text-gl-text-secondary mb-4">
+          Sellers and buyers will see your name on deliveries.
+        </p>
+        <input
+          type="text"
+          value={riderName}
+          onChange={(e) => {
+            setRiderName(e.target.value);
+            setRiderNameError("");
+          }}
+          placeholder="Your name"
+          className="w-full border border-gl-border-strong rounded-lg px-3 py-2.5 text-[13px] text-gl-text outline-none mb-1 transition-colors focus:border-gl-brand"
+          autoFocus
+        />
+        {riderNameError && <p className="text-[10px] text-gl-red mb-2">{riderNameError}</p>}
+
+        <div className="text-[10px] text-gl-text-secondary mt-3 mb-1.5">Vehicle</div>
+        <div className="flex gap-2 mb-3">
+          {riderVehicles.map((v) => (
+            <button key={v.value} onClick={() => setRiderVehicle(v.value)} className={chip(riderVehicle === v.value)}>
+              {v.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="text-[10px] text-gl-text-secondary mb-1.5">Area you deliver in</div>
+        <div className="grid grid-cols-2 gap-2 mb-5">
+          {serviceAreas.map((a) => (
+            <button key={a.name} onClick={() => setRiderArea(a.name)} className={chip(riderArea === a.name)}>
+              {a.name}
+            </button>
+          ))}
+        </div>
+
+        <button
+          onClick={handleCreateRider}
+          className="w-full bg-gl-brand text-white rounded-lg py-2.5 text-[13px] font-semibold mb-2.5 transition-transform active:scale-[0.98] active:opacity-90"
+        >
+          Start delivering
+        </button>
+        <button
+          onClick={() => setShowRiderPrompt(false)}
+          className="w-full text-gl-text-secondary text-[11px] font-medium py-1 active:opacity-60 transition-opacity"
+        >
+          Back
+        </button>
+      </div>
+    );
+  }
 
   if (showShopNamePrompt) {
     return (
@@ -140,15 +235,25 @@ export default function RoleSelectorPage() {
         )}
       </button>
 
-      <div className="w-full border border-gl-border rounded-lg p-3 flex items-center gap-3 mb-5 opacity-55">
+      <button
+        onClick={() => addRole("deliver")}
+        className={`w-full border rounded-lg p-3 flex items-center gap-3 mb-5 transition-all active:scale-[0.98] ${
+          activeRole === "deliver" ? "border-gl-brand border-[1.5px]" : "border-gl-border"
+        }`}
+      >
         <div className="w-10 h-10 rounded-lg bg-gl-bg-muted flex items-center justify-center shrink-0">
           <IconMotorbike size={20} className="text-gl-text-secondary" />
         </div>
-        <div className="flex-1">
+        <div className="flex-1 text-left">
           <div className="text-[12px] font-semibold text-gl-text">Deliver</div>
-          <div className="text-[10px] text-gl-text-secondary">Coming soon</div>
+          <div className="text-[10px] text-gl-text-secondary">Accept delivery jobs, track your earnings</div>
         </div>
-      </div>
+        {activeRole === "deliver" ? (
+          <IconCircleCheck size={18} className="text-gl-brand" />
+        ) : (
+          <IconCircle size={18} className="text-gl-bg-placeholder" />
+        )}
+      </button>
 
       <button
         onClick={handleContinue}

@@ -482,6 +482,35 @@ ranges from.
 
 ---
 
+## 11. Rider (delivery) side — in progress
+
+**Decisions (from the product owner):** follow the standards of dispatch
+apps like Uber and Didi — riders go online/offline and receive *timed job
+offers* they accept or decline, then follow a step-by-step trip flow;
+cash-on-delivery gets real cash-handover tracking (a ledger of cash the
+rider holds and owes back, kept separate from earnings); proof of delivery
+is a customer OTP. The buyer side shows the rider, live trip status, ETA
+and the OTP. AGENTS.md §4.4, §6 (Rider), §10 and §17 hold the spec.
+
+**Build order:**
+1. ✅ **Rider role and identity.** "Deliver" is a third mode at the role
+   selector; a new phone gives a name, vehicle and area and gets a rider
+   identity (`useRiderIdentityStore`, no demo rider). `/rider` (Jobs, empty
+   for now) and `/rider/profile`. Everything rider-specific will be keyed
+   by that id from the start. *Commit: "Add the rider role, identity and
+   first screens."*
+2. ⏳ **Dispatch and trip flow.** Online/offline, timed offers, accept/
+   decline, the trip steps, OTP at handover. This also adds the order
+   statuses the spec needs (`ready_for_pickup`, `rider_assigned`) and
+   changes the seller's "Request delivery" button to create a delivery
+   offer instead of instantly marking the order out for delivery. These
+   were deliberately NOT added in step 1: nothing can produce them until
+   dispatch exists, and adding them early would leave unreachable UI.
+3. ⏳ **Cash ledger, earnings, history.**
+4. ⏳ **Buyer side:** rider card, live status, ETA, OTP, rider rating.
+
+---
+
 ## 10. Test coverage
 
 ### 10.1 ✅ Resolved — zero automated tests existed until this pass
