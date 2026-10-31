@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 function secondsUntilMidnight() {
   const now = new Date();
@@ -17,6 +17,17 @@ function formatCountdown(totalSeconds: number) {
   return { hrs: pad(hrs), mins: pad(mins), secs: pad(secs) };
 }
 
+function subscribeToTick(onChange: () => void) {
+  const id = setInterval(onChange, 1000);
+  return () => clearInterval(id);
+}
+
+// null on the server (and during hydration), so server-rendered markup and
+// the first client paint match; the real seconds-to-midnight after that.
+function getServerSeconds(): number | null {
+  return null;
+}
+
 export function DealsCountdown() {
   // The real target ("time until midnight") is only meaningful on the
   // client — the server has no useful "now" for this. Start null and
@@ -27,15 +38,14 @@ export function DealsCountdown() {
   // decrementing a counter) also means the timer self-corrects for any
   // drift and, most importantly, never loops back to a fake "2h15m45s"
   // once it actually hits zero — it counts down to a real deadline.
-  const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
-
-  useEffect(() => {
-    setSecondsLeft(secondsUntilMidnight());
-    const interval = setInterval(() => {
-      setSecondsLeft(secondsUntilMidnight());
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
+  //
+  // Reads the clock through useSyncExternalStore (a 1s tick) rather than
+  // copying it into state from an effect (react-hooks/set-state-in-effect).
+  const secondsLeft = useSyncExternalStore<number | null>(
+    subscribeToTick,
+    secondsUntilMidnight,
+    getServerSeconds
+  );
 
   if (secondsLeft === null) {
     // Reserve the same layout space before hydration so nothing jumps once

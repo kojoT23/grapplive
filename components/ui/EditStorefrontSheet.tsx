@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import {
   IconX,
   IconBrandWhatsapp,
@@ -101,20 +101,37 @@ export function EditStorefrontSheet({
   const [bannerPreview, setBannerPreview] = useState<string | null>(bannerDataUrl);
   const [saved, setSaved] = useState(false);
 
-  // Reset the form to the current saved values each time the sheet opens,
-  // so a closed-without-saving edit doesn't linger in local state.
-  useEffect(() => {
-    if (isOpen) {
-      setAboutInput(about);
-      setWhatsapp(socials.whatsappNumber ?? "");
-      setInstagram(socials.instagramHandle ?? "");
-      setTiktok(socials.tiktokHandle ?? "");
-      setFacebook(socials.facebookHandle ?? "");
-      setLogoPreview(logoDataUrl);
-      setBannerPreview(bannerDataUrl);
-      setSaved(false);
-    }
-  }, [isOpen, about, socials, logoDataUrl, bannerDataUrl]);
+  // Reset the form to the current saved values each time the sheet opens
+  // (or the saved values change while it's open), so a closed-without-saving
+  // edit doesn't linger in local state. Done during render by remembering
+  // which saved values the form was last reset from, not in an effect
+  // (react-hooks/set-state-in-effect). Closing forgets them, so the next
+  // open always resets.
+  const [resetFrom, setResetFrom] = useState<{
+    about: string;
+    socials: typeof socials;
+    logoDataUrl: string | null;
+    bannerDataUrl: string | null;
+  } | null>(null);
+  if (!isOpen) {
+    if (resetFrom !== null) setResetFrom(null);
+  } else if (
+    !resetFrom ||
+    resetFrom.about !== about ||
+    resetFrom.socials !== socials ||
+    resetFrom.logoDataUrl !== logoDataUrl ||
+    resetFrom.bannerDataUrl !== bannerDataUrl
+  ) {
+    setResetFrom({ about, socials, logoDataUrl, bannerDataUrl });
+    setAboutInput(about);
+    setWhatsapp(socials.whatsappNumber ?? "");
+    setInstagram(socials.instagramHandle ?? "");
+    setTiktok(socials.tiktokHandle ?? "");
+    setFacebook(socials.facebookHandle ?? "");
+    setLogoPreview(logoDataUrl);
+    setBannerPreview(bannerDataUrl);
+    setSaved(false);
+  }
 
   if (!isOpen) return null;
 

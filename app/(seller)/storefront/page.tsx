@@ -550,7 +550,7 @@ export default function SellerStorefrontPage() {
 
                   {req.type === "audio" && req.audioUrl && (
                     <div className="ml-[42px]">
-                      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                      { }
                       <audio src={req.audioUrl} controls className="w-full h-8 mb-2" />
                       <button
                         onClick={() => setReplyTarget(req)}

@@ -1,6 +1,18 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+
+const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
+
+function subscribeToReducedMotion(onChange: () => void) {
+  const mq = window.matchMedia(REDUCED_MOTION_QUERY);
+  mq.addEventListener("change", onChange);
+  return () => mq.removeEventListener("change", onChange);
+}
+
+function getPrefersReducedMotion() {
+  return window.matchMedia(REDUCED_MOTION_QUERY).matches;
+}
 
 // A thin client-island wrapper, same pattern as BannerCarousel/DealsCountdown
 // /ShopTheLook — it only owns the reveal *behavior*, the children it wraps
@@ -16,15 +28,19 @@ export function RevealOnScroll({
   className?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [isVisible, setIsVisible] = useState(false);
+  const [hasIntersected, setHasIntersected] = useState(false);
+  // Read through useSyncExternalStore (false on the server) instead of being
+  // copied into state from an effect. People who prefer reduced motion get
+  // the content visible straight away, with no scroll animation.
+  const prefersReducedMotion = useSyncExternalStore(
+    subscribeToReducedMotion,
+    getPrefersReducedMotion,
+    () => false
+  );
+  const isVisible = prefersReducedMotion || hasIntersected;
 
   useEffect(() => {
-    const prefersReducedMotion =
-      typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (prefersReducedMotion) {
-      setIsVisible(true);
-      return;
-    }
+    if (prefersReducedMotion) return;
 
     const node = ref.current;
     if (!node) return;
@@ -32,7 +48,7 @@ export function RevealOnScroll({
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          setIsVisible(true);
+          setHasIntersected(true);
           observer.disconnect();
         }
       },
@@ -41,7 +57,7 @@ export function RevealOnScroll({
 
     observer.observe(node);
     return () => observer.disconnect();
-  }, []);
+  }, [prefersReducedMotion]);
 
   return (
     <div

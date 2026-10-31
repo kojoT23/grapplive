@@ -141,7 +141,7 @@ export function BuyerRequestSheet({
 
         {screen === "preview" && recorder.audioUrl && (
           <div className="flex flex-col items-center py-4">
-            {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+            { }
             <audio src={recorder.audioUrl} controls className="w-full mb-4" />
             <div className="flex gap-2 w-full">
               <button
