@@ -12,7 +12,9 @@ export type OrderStatus =
   | "awaiting_confirmation"
   | "ready_to_pack"
   | "preparing"
-  | "out_for_delivery"
+  | "ready_for_pickup" // delivery requested, waiting for a rider to accept
+  | "rider_assigned" // a rider accepted; heading to / at the seller
+  | "out_for_delivery" // rider has the parcel and is on the way
   | "delivered";
 
 export type OrderHistoryEntry = {
@@ -50,6 +52,12 @@ export type OrderGroup = {
 export type Order = {
   id: string;
   groups: OrderGroup[];
+  // Captured at checkout so a rider can reach the buyer and know where to
+  // go. Optional: the static fixture orders predate this. A real buyer
+  // identity (ROADMAP.md §1.3) and a full address (digital address,
+  // landmark) replace these once checkout collects them.
+  buyerPhone?: string;
+  deliveryArea?: string;
 };
 
 export const initialOrders: Order[] = [

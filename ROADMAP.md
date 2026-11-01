@@ -499,13 +499,29 @@ and the OTP. AGENTS.md §4.4, §6 (Rider), §10 and §17 hold the spec.
    for now) and `/rider/profile`. Everything rider-specific will be keyed
    by that id from the start. *Commit: "Add the rider role, identity and
    first screens."*
-2. ⏳ **Dispatch and trip flow.** Online/offline, timed offers, accept/
-   decline, the trip steps, OTP at handover. This also adds the order
-   statuses the spec needs (`ready_for_pickup`, `rider_assigned`) and
-   changes the seller's "Request delivery" button to create a delivery
-   offer instead of instantly marking the order out for delivery. These
-   were deliberately NOT added in step 1: nothing can produce them until
-   dispatch exists, and adding them early would leave unreachable UI.
+2. ✅ **Dispatch and trip flow.** Riders go online/offline and see the
+   nearest open request in their area as a 30-second offer (accept /
+   decline / expires). Accepting starts a trip: heading to pickup ->
+   at pickup -> picked up/out for delivery -> at the customer -> delivered,
+   where the last step needs the customer's 4-digit OTP (5 wrong tries lock
+   it). A rider can report a failed delivery (seller unavailable at pickup;
+   customer unavailable / wrong address / refused at the door). The
+   **delivery record** (`lib/mock-data/deliveries.ts`, `useDeliveryStore`) is
+   separate from the order; every status change goes through a checked
+   action, and the order only carries the coarse status. New order statuses
+   `ready_for_pickup` and `rider_assigned`. The seller's "Request delivery"
+   button (now also on *Preparing* orders, so Direct MoMo orders can reach
+   a rider) creates the offer instead of faking an instant rider
+   (`requestDeliveryForGroup`). A failed delivery sends the order back to
+   the seller's *Needs action* list to request again. The buyer's order
+   page shows the rider, live status, a call button and the **delivery
+   code**. `placeOrder` now records the buyer's phone and area on the
+   order (first part of §1.3). Pages: `/rider` (Jobs), `/rider/active`.
+   *Known limits:* trip distance/fee are a deterministic MOCK
+   (`estimateTrip`); the drop-off is just an area, because checkout does
+   not collect a real address or landmark yet; there is one shared
+   "dispatch server" in the browser, so testing means switching phone
+   numbers on one device.
 3. ⏳ **Cash ledger, earnings, history.**
 4. ⏳ **Buyer side:** rider card, live status, ETA, OTP, rider rating.
 
@@ -539,6 +555,10 @@ lower return at this stage:
 - `lib/store/useStoreProfileStore.test.ts` (added later, 8 tests) — the
   per-seller storefront profile: seeding, isolation between sellers, and
   the migration from the old single-seller shape.
+- `lib/store/useDeliveryStore.test.ts` (19 tests) and
+  `lib/store/useRiderStore.test.ts` (2) — dispatch: offers, acceptance
+  races, the checked trip flow, OTP completion and lock-out, failures and
+  re-requests, order sync, and buyer contact captured at checkout.
 - `lib/store/useLiveSessionStore.test.ts` (7 tests) — per-seller live
   sessions: isolation, clearing, rescheduling, and the migration from the
   old single-session shape.

@@ -5,13 +5,21 @@ import { TabBar } from "@/components/ui/TabBar";
 import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
 import { useCurrentSellerId } from "@/lib/hooks/useCurrentSellerId";
 import { useOrdersStore } from "@/lib/store/useOrdersStore";
+import { useDeliveryStore, latestDeliveryForGroup } from "@/lib/store/useDeliveryStore";
+import { DeliveryOrderCard, isRiderManaged } from "@/components/orders/DeliveryOrderCard";
+import { requestDeliveryForGroup } from "@/lib/delivery/dispatch";
 import { sellerTabs } from "@/lib/nav/seller-tabs";
 import { flattenGroups, groupTotal, type FlatOrderGroup, type OrderStatus } from "@/lib/mock-data/orders";
 
 type FilterTab = "needs_action" | "preparing" | "delivered";
 
 const NEEDS_ACTION_STATUSES: OrderStatus[] = ["awaiting_confirmation", "ready_to_pack"];
-const PREPARING_STATUSES: OrderStatus[] = ["preparing", "out_for_delivery"];
+const PREPARING_STATUSES: OrderStatus[] = [
+  "preparing",
+  "ready_for_pickup",
+  "rider_assigned",
+  "out_for_delivery",
+];
 const DELIVERED_STATUSES: OrderStatus[] = ["delivered"];
 
 function formatGHS(amount: number) {
@@ -37,6 +45,18 @@ function OrderCard({
 }) {
   const flashClass = justUpdated ? "gl-status-flash" : "";
   const total = groupTotal(group);
+  const delivery = useDeliveryStore((s) => latestDeliveryForGroup(s.deliveries, group.id));
+
+  if (isRiderManaged(group, delivery)) {
+    return (
+      <DeliveryOrderCard
+        group={group}
+        delivery={delivery}
+        flashClass={flashClass}
+        onRequestDelivery={onRequestDelivery}
+      />
+    );
+  }
 
   if (group.status === "awaiting_confirmation") {
     return (
@@ -96,8 +116,14 @@ function OrderCard({
         </div>
         <div className="text-[11px] text-gl-text">{itemsSummary(group)}</div>
         <div className="text-[10px] text-gl-text-secondary">
-          {formatGHS(total)} · Getting ready to hand to rider
+          {formatGHS(total)} · Ready for a rider
         </div>
+        <button
+          onClick={() => onRequestDelivery(group.id)}
+          className="mt-2 w-full bg-gl-brand text-white rounded-lg py-2 text-[11px] font-semibold active:opacity-90"
+        >
+          Request delivery
+        </button>
       </div>
     );
   }
@@ -146,7 +172,7 @@ export default function OrdersPage() {
   const currentSellerId = useCurrentSellerId();
   const orders = useOrdersStore((s) => s.orders);
   const confirmPayment = useOrdersStore((s) => s.confirmPayment);
-  const requestDelivery = useOrdersStore((s) => s.requestDelivery);
+  const deliveries = useDeliveryStore((s) => s.deliveries);
   const markDelivered = useOrdersStore((s) => s.markDelivered);
   const [activeFilter, setActiveFilter] = useState<FilterTab>("needs_action");
   const [recentlyUpdatedId, setRecentlyUpdatedId] = useState<string | null>(null);
@@ -162,11 +188,16 @@ export default function OrdersPage() {
   // flattenGroups returns every seller's groups (and GrappStore's); a seller's
   // own orders page should only ever show their own.
   const groups = flattenGroups(orders).filter((g) => g.sellerId === currentSellerId);
-  const needsActionCount = groups.filter((g) => NEEDS_ACTION_STATUSES.includes(g.status)).length;
+  // A failed delivery attempt needs the seller's attention too (re-request a
+  // rider, or sort out the problem), so it counts as needing action.
+  const needsAction = (g: FlatOrderGroup) =>
+    NEEDS_ACTION_STATUSES.includes(g.status) ||
+    (g.status === "ready_for_pickup" && latestDeliveryForGroup(deliveries, g.id)?.status === "failed");
+  const needsActionCount = groups.filter(needsAction).length;
 
   const filteredGroups = groups.filter((g) => {
-    if (activeFilter === "needs_action") return NEEDS_ACTION_STATUSES.includes(g.status);
-    if (activeFilter === "preparing") return PREPARING_STATUSES.includes(g.status);
+    if (activeFilter === "needs_action") return needsAction(g);
+    if (activeFilter === "preparing") return PREPARING_STATUSES.includes(g.status) && !needsAction(g);
     return DELIVERED_STATUSES.includes(g.status);
   });
 
@@ -213,7 +244,7 @@ export default function OrdersPage() {
             group={group}
             justUpdated={group.id === recentlyUpdatedId}
             onConfirmPayment={(id) => flashThenRun(id, confirmPayment)}
-            onRequestDelivery={(id) => flashThenRun(id, requestDelivery)}
+            onRequestDelivery={(id) => flashThenRun(id, requestDeliveryForGroup)}
             onMarkDelivered={(id) => flashThenRun(id, markDelivered)}
           />
         ))

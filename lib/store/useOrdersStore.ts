@@ -9,6 +9,17 @@ import {
   type OrderStatus,
   type PaymentMethod,
 } from "@/lib/mock-data/orders";
+import { useAppStore } from "@/lib/store/useAppStore";
+import { useLocationStore } from "@/lib/store/useLocationStore";
+
+// What the delivery side tells an order when a delivery moves along. Keeps
+// the order's coarse status/history in step with the finer delivery record.
+export type DeliveryUpdate = {
+  status: OrderStatus;
+  label: string;
+  riderName?: string | null; // null clears it, undefined leaves it
+  etaMinutes?: number | null;
+};
 
 export type NewOrderGroupInput = {
   sellerId: string;
@@ -23,7 +34,11 @@ type OrdersState = {
   setHasHydrated: (value: boolean) => void;
   placeOrder: (groups: NewOrderGroupInput[]) => void;
   confirmPayment: (groupId: string) => void;
+  // Seller asks for a rider: the order waits as ready_for_pickup. The
+  // matching delivery offer is created by requestDeliveryForGroup
+  // (lib/delivery/dispatch.ts), which is what callers should use.
   requestDelivery: (groupId: string) => void;
+  applyDeliveryUpdate: (groupId: string, update: DeliveryUpdate) => void;
   markDelivered: (groupId: string) => void;
 };
 
@@ -104,7 +119,10 @@ export const useOrdersStore = create<OrdersState>()(
             };
           });
 
-          const newOrder: Order = { id: orderId, groups };
+          // The buyer's phone and delivery area, so a rider can reach them.
+          const buyerPhone = useAppStore.getState().phone || undefined;
+          const deliveryArea = useLocationStore.getState().areaName ?? undefined;
+          const newOrder: Order = { id: orderId, groups, buyerPhone, deliveryArea };
           return { orders: [newOrder, ...state.orders] };
         }),
 
@@ -121,10 +139,21 @@ export const useOrdersStore = create<OrdersState>()(
         set((state) => ({
           orders: updateGroup(state.orders, groupId, (g) => ({
             ...g,
-            status: "out_for_delivery",
-            riderName: "Rider assigned",
-            etaMinutes: 30,
-            history: [...g.history, { status: "out_for_delivery", label: "Out for delivery", timestamp: nowLabel() }],
+            status: "ready_for_pickup",
+            riderName: undefined,
+            etaMinutes: undefined,
+            history: [...g.history, { status: "ready_for_pickup", label: "Delivery requested — waiting for a rider", timestamp: nowLabel() }],
+          })),
+        })),
+
+      applyDeliveryUpdate: (groupId, update) =>
+        set((state) => ({
+          orders: updateGroup(state.orders, groupId, (g) => ({
+            ...g,
+            status: update.status,
+            riderName: update.riderName === undefined ? g.riderName : update.riderName ?? undefined,
+            etaMinutes: update.etaMinutes === undefined ? g.etaMinutes : update.etaMinutes ?? undefined,
+            history: [...g.history, { status: update.status, label: update.label, timestamp: nowLabel() }],
           })),
         })),
 

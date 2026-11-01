@@ -43,6 +43,8 @@ type RiderIdentityState = {
   setHasHydrated: (value: boolean) => void;
   // Returns the existing rider id for `phone`, or creates one from `input`.
   getOrCreateRiderId: (phone: string, input: NewRiderInput) => string;
+  // Called by the delivery side when a delivery is completed.
+  recordCompletedTrip: (riderId: string) => void;
 };
 
 let riderCounter = 0;
@@ -77,6 +79,19 @@ export const useRiderIdentityStore = create<RiderIdentityState>()(
         }));
         return identity.id;
       },
+
+      recordCompletedTrip: (riderId) =>
+        set((state) => {
+          const entry = Object.entries(state.identitiesByPhone).find(([, r]) => r.id === riderId);
+          if (!entry) return state;
+          const [phone, rider] = entry;
+          return {
+            identitiesByPhone: {
+              ...state.identitiesByPhone,
+              [phone]: { ...rider, tripsCompleted: rider.tripsCompleted + 1 },
+            },
+          };
+        }),
     }),
     {
       name: "grapplive-rider-identity",
@@ -94,4 +109,11 @@ export const useRiderIdentityStore = create<RiderIdentityState>()(
 export function getCurrentRiderIdSync(): string | null {
   const phone = useAppStore.getState().phone;
   return phone ? useRiderIdentityStore.getState().identitiesByPhone[phone]?.id ?? null : null;
+}
+
+// Look a rider up by id (the delivery side only has ids).
+export function getRiderByIdSync(riderId: string): RiderIdentity | undefined {
+  return Object.values(useRiderIdentityStore.getState().identitiesByPhone).find(
+    (r) => r.id === riderId
+  );
 }

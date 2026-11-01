@@ -9,6 +9,8 @@ const statusLabel: Record<OrderStatus, { text: string; className: string }> = {
   awaiting_confirmation: { text: "Awaiting confirmation", className: "text-gl-amber" },
   ready_to_pack: { text: "Confirmed", className: "text-gl-amber" },
   preparing: { text: "Preparing", className: "text-gl-amber" },
+  ready_for_pickup: { text: "Waiting for a rider", className: "text-gl-amber" },
+  rider_assigned: { text: "Rider assigned", className: "text-gl-brand" },
   out_for_delivery: { text: "Out for delivery", className: "text-gl-brand" },
   delivered: { text: "Delivered", className: "text-gl-green" },
 };
