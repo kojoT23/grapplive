@@ -10,6 +10,8 @@ import { useCurrentRider } from "@/lib/hooks/useCurrentRider";
 import { useSecondsUntil } from "@/lib/hooks/useSecondsUntil";
 import { riderTabs } from "@/lib/nav/rider-tabs";
 import { useRiderStore } from "@/lib/store/useRiderStore";
+import { useCashLedgerStore, heldTotal } from "@/lib/store/useCashLedgerStore";
+import { CASH_HOLD_LIMIT_GHS } from "@/lib/mock-data/cash";
 import {
   useDeliveryStore,
   activeDeliveryFor,
@@ -43,6 +45,8 @@ function OfferCard({ delivery, riderId }: { delivery: Delivery; riderId: string 
     if (result === "ok") router.push("/rider/active");
     else if (result === "busy") setMessage("Finish your current delivery first.");
     else if (result === "offline") setMessage("Go online to accept jobs.");
+    else if (result === "cash_limit")
+      setMessage("You're holding too much cash. Hand it over (Earnings tab) before taking new jobs.");
     else setMessage("This job is no longer available.");
   };
 
@@ -104,10 +108,12 @@ export default function RiderJobsPage() {
   const deliveries = useDeliveryStore((s) => s.deliveries);
   const deliveriesHydrated = useDeliveryStore((s) => s.hasHydrated);
   const statusHydrated = useRiderStore((s) => s.hasHydrated);
+  const cashEntries = useCashLedgerStore((s) => s.entries);
+  const ledgerHydrated = useCashLedgerStore((s) => s.hasHydrated);
   const online = useRiderStore((s) => (rider ? s.onlineByRider[rider.id] === true : false));
   const setOnline = useRiderStore((s) => s.setOnline);
 
-  if (isChecking || !riderHydrated || !deliveriesHydrated || !statusHydrated) {
+  if (isChecking || !riderHydrated || !deliveriesHydrated || !statusHydrated || !ledgerHydrated) {
     return (
       <div className="flex items-center justify-center min-h-dvh">
         <div className="text-[12px] text-gl-text-secondary">Loading…</div>
@@ -135,6 +141,7 @@ export default function RiderJobsPage() {
   }
 
   const active = activeDeliveryFor(deliveries, rider.id);
+  const heldCash = heldTotal(cashEntries, rider.id);
   const offer = online && !active ? openOffersFor(deliveries, rider.id, rider.area)[0] : undefined;
 
   return (
@@ -168,6 +175,24 @@ export default function RiderJobsPage() {
           {online ? "Online" : "Go online"}
         </button>
       </div>
+
+      {heldCash > 0 && (
+        <Link
+          href="/rider/earnings"
+          className={`block mx-3 md:mx-5 mb-3 border rounded-lg px-3 py-2.5 active:opacity-90 ${
+            heldCash >= CASH_HOLD_LIMIT_GHS ? "border-gl-amber bg-gl-bg-muted" : "border-gl-border"
+          }`}
+        >
+          <div className="text-[10px] font-semibold text-gl-text">
+            You&apos;re holding GHS {heldCash.toLocaleString("en-GH")} in cash
+          </div>
+          <div className="text-[9px] text-gl-text-secondary">
+            {heldCash >= CASH_HOLD_LIMIT_GHS
+              ? "At the limit — hand it over to take new jobs"
+              : "Hand it to the seller and mark it on the Earnings tab"}
+          </div>
+        </Link>
+      )}
 
       <div className="mx-3 md:mx-5 mb-3 grid grid-cols-3 gap-2">
         <div className="border border-gl-border rounded-lg px-3 py-2.5">

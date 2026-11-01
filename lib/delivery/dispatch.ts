@@ -1,5 +1,6 @@
 import { getStoreBySellerId } from "@/lib/mock-data/stores";
 import { ACTIVE_DELIVERY_STATUSES } from "@/lib/mock-data/deliveries";
+import { groupTotal } from "@/lib/mock-data/orders";
 import { useOrdersStore } from "@/lib/store/useOrdersStore";
 import { latestDeliveryForGroup, useDeliveryStore } from "@/lib/store/useDeliveryStore";
 
@@ -33,8 +34,9 @@ export function requestDeliveryForGroup(groupId: string): void {
     pickupArea,
     dropoffArea: order.deliveryArea ?? pickupArea,
     customerPhone: order.buyerPhone ?? "",
-    // No cash-on-delivery payment method exists at checkout yet, so every
-    // delivery is prepaid. ROADMAP.md §11 step 3 introduces COD.
-    codAmountGHS: 0,
+    // Cash on delivery: the rider collects the item total from the buyer,
+    // and that cash is tracked in the cash ledger until it reaches the
+    // seller. Every other payment method is already paid.
+    codAmountGHS: group.paymentMethod === "cash_on_delivery" ? groupTotal(group) : 0,
   });
 }

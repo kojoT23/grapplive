@@ -72,6 +72,8 @@ function initialStatusAndLabel(paymentMethod: PaymentMethod): { status: OrderSta
       return { status: "ready_to_pack", label: "Order confirmed and paid" };
     case "direct_momo":
       return { status: "awaiting_confirmation", label: "Order placed — awaiting seller confirmation" };
+    case "cash_on_delivery":
+      return { status: "ready_to_pack", label: "Order confirmed — you'll pay cash on delivery" };
   }
 }
 

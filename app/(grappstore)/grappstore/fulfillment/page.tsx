@@ -8,6 +8,7 @@ import { useOrdersStore } from "@/lib/store/useOrdersStore";
 import { useDeliveryStore, latestDeliveryForGroup } from "@/lib/store/useDeliveryStore";
 import { DeliveryOrderCard, isRiderManaged } from "@/components/orders/DeliveryOrderCard";
 import { requestDeliveryForGroup } from "@/lib/delivery/dispatch";
+import { CashToConfirm } from "@/components/orders/CashToConfirm";
 import { flattenGroups, groupTotal, type FlatOrderGroup, type OrderStatus } from "@/lib/mock-data/orders";
 
 type FilterTab = "needs_action" | "preparing" | "delivered";
@@ -196,6 +197,8 @@ export default function GrappStoreFulfillmentPage() {
       <p className="px-3 md:px-5 pb-2.5 text-[10px] text-gl-text-secondary">
         Internal ops view — GRAPPlive fulfills these directly, no seller confirmation needed.
       </p>
+
+      <CashToConfirm sellerId="grapplive-official" />
 
       <div className="flex gap-1.5 px-3 md:px-5 pb-2.5 overflow-x-auto">
         {tabs.map((tab) => (

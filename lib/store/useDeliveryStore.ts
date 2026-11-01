@@ -14,6 +14,8 @@ import {
 } from "@/lib/mock-data/deliveries";
 import { useOrdersStore } from "@/lib/store/useOrdersStore";
 import { useRiderStore } from "@/lib/store/useRiderStore";
+import { useCashLedgerStore, heldTotal } from "@/lib/store/useCashLedgerStore";
+import { CASH_HOLD_LIMIT_GHS } from "@/lib/mock-data/cash";
 import { getRiderByIdSync, useRiderIdentityStore } from "@/lib/store/useRiderIdentityStore";
 
 // The prototype's stand-in for the dispatch backend. Deliveries are shared
@@ -35,7 +37,7 @@ export type NewDeliveryInput = {
   codAmountGHS: number;
 };
 
-export type AcceptResult = "ok" | "gone" | "busy" | "offline" | "unknown_rider";
+export type AcceptResult = "ok" | "gone" | "busy" | "offline" | "unknown_rider" | "cash_limit";
 export type StepResult = "ok" | "invalid";
 export type CompleteResult = "ok" | "wrong_otp" | "locked" | "invalid";
 
@@ -171,6 +173,10 @@ export const useDeliveryStore = create<DeliveryState>()(
 
         const { deliveries } = get();
         if (activeDeliveryFor(deliveries, riderId)) return "busy";
+        // Too much unhanded cash: hand some over before taking another job.
+        if (heldTotal(useCashLedgerStore.getState().entries, riderId) >= CASH_HOLD_LIMIT_GHS) {
+          return "cash_limit";
+        }
         const delivery = deliveries.find((d) => d.id === deliveryId);
         if (!delivery || delivery.status !== "offered" || delivery.declinedBy.includes(riderId)) {
           return "gone";
@@ -236,6 +242,18 @@ export const useDeliveryStore = create<DeliveryState>()(
           label: "Delivered",
         });
         useRiderIdentityStore.getState().recordCompletedTrip(riderId);
+        // The rider has now collected the cash: start its trail in the ledger.
+        if (delivery.codAmountGHS > 0 && delivery.riderName) {
+          useCashLedgerStore.getState().recordCollection({
+            deliveryId: delivery.id,
+            orderGroupId: delivery.orderGroupId,
+            riderId,
+            riderName: delivery.riderName,
+            sellerId: delivery.sellerId,
+            sellerName: delivery.sellerName,
+            amountGHS: delivery.codAmountGHS,
+          });
+        }
         return "ok";
       },
 

@@ -98,6 +98,15 @@ export default function BuyerOrderDetailPage() {
           </div>
         </div>
 
+        {group.paymentMethod === "cash_on_delivery" && group.status !== "delivered" && (
+          <div className="border border-gl-border rounded-lg p-3 mb-4">
+            <div className="text-[10px] font-semibold text-gl-text mb-0.5">CASH ON DELIVERY</div>
+            <div className="text-[11px] text-gl-text-secondary">
+              Pay GHS {groupTotal(group).toLocaleString("en-GH")} in cash to your rider when your order arrives.
+            </div>
+          </div>
+        )}
+
         {deliveryInProgress && delivery && (
           <div className="border-[1.5px] border-gl-brand rounded-lg p-3 mb-4 bg-gl-brand-soft-bg">
             <div className="text-[10px] font-semibold text-gl-brand-soft-text mb-1">

@@ -522,8 +522,27 @@ and the OTP. AGENTS.md §4.4, §6 (Rider), §10 and §17 hold the spec.
    not collect a real address or landmark yet; there is one shared
    "dispatch server" in the browser, so testing means switching phone
    numbers on one device.
-3. ⏳ **Cash ledger, earnings, history.**
-4. ⏳ **Buyer side:** rider card, live status, ETA, OTP, rider rating.
+3. ✅ **Cash ledger, earnings, history.** Checkout has a third payment
+   option, **Cash on delivery** (no fee; the order is confirmed straight
+   away). A COD delivery makes the rider collect the item total; when the
+   OTP-confirmed delivery completes, that cash is recorded in the **cash
+   ledger** (`useCashLedgerStore`): `held` -> `handover_pending` (the rider
+   says they handed it over) -> `settled` (the receiving seller confirms on
+   their Orders page — GrappStore on its fulfillment page). Each step checks
+   who is acting. A rider holding GHS 500 or more unhanded cash can't
+   accept new jobs (`CASH_HOLD_LIMIT_GHS`). Earnings (`lib/delivery/
+   earnings.ts`) are the fees of completed deliveries minus cash-outs and
+   are kept entirely separate from COD cash. New rider tabs: **History**
+   (`/rider/history`) and **Earnings** (`/rider/earnings`: cash-out,
+   today/7 days, cash you hold and the handover buttons). *Known limits:*
+   cash-out doesn't move real money (same as seller payouts); the cash
+   limit is a flat number; no dispute flow if a seller denies receiving
+   handed-over cash; the platform's cut of delivery fees is not modeled.
+4. ⏳ **Buyer side, remaining.** DONE already (in step 2): rider name, live
+   trip status, call-rider button, ETA at acceptance and the delivery code
+   on the buyer's order page. STILL TO DO: a live (counting-down) ETA, the
+   buyer rating the rider after delivery (fills `RiderIdentity.rating`), and
+   a "delivery failed" follow-up for the buyer beyond today's notice.
 
 ---
 
@@ -555,6 +574,9 @@ lower return at this stage:
 - `lib/store/useStoreProfileStore.test.ts` (added later, 8 tests) — the
   per-seller storefront profile: seeding, isolation between sellers, and
   the migration from the old single-seller shape.
+- `lib/store/useCashLedgerStore.test.ts` (13 tests) — COD: the cash a
+  delivery collects, the held -> pending -> settled trail and who may do
+  each step, the cash limit, earnings by period and cash-out.
 - `lib/store/useDeliveryStore.test.ts` (19 tests) and
   `lib/store/useRiderStore.test.ts` (2) — dispatch: offers, acceptance
   races, the checked trip flow, OTP completion and lock-out, failures and

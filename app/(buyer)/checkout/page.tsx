@@ -142,7 +142,7 @@ export default function CheckoutPage() {
       </div>
 
       <p className="text-[10px] text-gl-text-secondary mb-4">
-        Both go through MoMo — pick what matters more to you
+        Pick how you&apos;d like to pay
       </p>
 
       <button
@@ -167,7 +167,7 @@ export default function CheckoutPage() {
 
       <button
         onClick={() => setMethod("direct_momo")}
-        className={`w-full text-left border rounded-lg p-3 mb-4 transition-colors ${
+        className={`w-full text-left border rounded-lg p-3 mb-2.5 transition-colors ${
           method === "direct_momo" ? "border-[1.5px] border-gl-brand" : "border-gl-border-strong"
         }`}
       >
@@ -175,6 +175,19 @@ export default function CheckoutPage() {
         <p className="text-[10px] text-gl-text-secondary mb-1.5">
           Send payment yourself, then confirm — seller checks and confirms manually, may take a
           few hours
+        </p>
+        <div className="text-[10px] font-semibold text-gl-text">No fee</div>
+      </button>
+
+      <button
+        onClick={() => setMethod("cash_on_delivery")}
+        className={`w-full text-left border rounded-lg p-3 mb-4 transition-colors ${
+          method === "cash_on_delivery" ? "border-[1.5px] border-gl-brand" : "border-gl-border-strong"
+        }`}
+      >
+        <div className="text-[12px] font-semibold text-gl-text mb-1">Cash on delivery</div>
+        <p className="text-[10px] text-gl-text-secondary mb-1.5">
+          Pay the rider in cash when your order arrives — have the exact amount ready
         </p>
         <div className="text-[10px] font-semibold text-gl-text">No fee</div>
       </button>

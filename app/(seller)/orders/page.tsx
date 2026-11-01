@@ -8,8 +8,9 @@ import { useOrdersStore } from "@/lib/store/useOrdersStore";
 import { useDeliveryStore, latestDeliveryForGroup } from "@/lib/store/useDeliveryStore";
 import { DeliveryOrderCard, isRiderManaged } from "@/components/orders/DeliveryOrderCard";
 import { requestDeliveryForGroup } from "@/lib/delivery/dispatch";
+import { CashToConfirm } from "@/components/orders/CashToConfirm";
 import { sellerTabs } from "@/lib/nav/seller-tabs";
-import { flattenGroups, groupTotal, type FlatOrderGroup, type OrderStatus } from "@/lib/mock-data/orders";
+import { flattenGroups, groupTotal, paymentMethodLabel, type FlatOrderGroup, type OrderStatus } from "@/lib/mock-data/orders";
 
 type FilterTab = "needs_action" | "preparing" | "delivered";
 
@@ -111,7 +112,7 @@ function OrderCard({
         <div className="flex justify-between mb-1">
           <span className="text-[10px] font-semibold text-gl-amber">PREPARING</span>
           <span className="text-[9px] text-gl-text-secondary">
-            {group.paymentMethod === "direct_momo" ? "Direct MoMo" : "Instant Confirm"}
+            {paymentMethodLabel(group.paymentMethod)}
           </span>
         </div>
         <div className="text-[11px] text-gl-text">{itemsSummary(group)}</div>
@@ -134,7 +135,7 @@ function OrderCard({
         <div className="flex justify-between mb-1">
           <span className="text-[10px] font-semibold text-gl-text-secondary">OUT FOR DELIVERY</span>
           <span className="text-[9px] text-gl-text-secondary">
-            {group.paymentMethod === "direct_momo" ? "Direct MoMo" : "Instant Confirm"}
+            {paymentMethodLabel(group.paymentMethod)}
           </span>
         </div>
         <div className="text-[11px] text-gl-text mb-0.5">{itemsSummary(group)}</div>
@@ -158,7 +159,7 @@ function OrderCard({
       <div className="flex justify-between mb-1">
         <span className="text-[10px] font-semibold text-gl-text-secondary">DELIVERED</span>
         <span className="text-[9px] text-gl-text-secondary">
-          {group.paymentMethod === "direct_momo" ? "Direct MoMo" : "Instant Confirm"}
+          {paymentMethodLabel(group.paymentMethod)}
         </span>
       </div>
       <div className="text-[11px] text-gl-text">{itemsSummary(group)}</div>
@@ -216,6 +217,8 @@ export default function OrdersPage() {
   return (
     <div className="pb-16">
       <h1 className="px-3 md:px-5 pt-3.5 pb-2 text-[14px] font-semibold text-gl-text">Orders</h1>
+
+      <CashToConfirm sellerId={currentSellerId} />
 
       <div className="flex gap-1.5 px-3 md:px-5 pb-2.5 overflow-x-auto">
         {tabs.map((tab) => (

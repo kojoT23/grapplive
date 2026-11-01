@@ -6,7 +6,24 @@
 // is the merchant of record (AGENTS.md §40.5). Conflating them would have
 // been a landmine for any future seller dashboard, analytics, or backend
 // work that groups/filters orders by payment method.
-export type PaymentMethod = "direct_momo" | "instant_confirm" | "grapplive_fulfilled";
+export type PaymentMethod =
+  | "direct_momo"
+  | "instant_confirm"
+  | "grapplive_fulfilled"
+  | "cash_on_delivery"; // buyer pays the rider in cash; tracked in the cash ledger
+
+export function paymentMethodLabel(method: PaymentMethod): string {
+  switch (method) {
+    case "direct_momo":
+      return "Direct MoMo";
+    case "instant_confirm":
+      return "Instant Confirm";
+    case "cash_on_delivery":
+      return "Cash on delivery";
+    case "grapplive_fulfilled":
+      return "GRAPPlive";
+  }
+}
 
 export type OrderStatus =
   | "awaiting_confirmation"
