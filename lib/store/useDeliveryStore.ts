@@ -45,6 +45,7 @@ export type NewDeliveryInput = {
 export type AcceptResult = "ok" | "gone" | "busy" | "offline" | "unknown_rider" | "cash_limit";
 export type StepResult = "ok" | "invalid";
 export type CompleteResult = "ok" | "wrong_otp" | "locked" | "invalid";
+export type RateResult = "ok" | "invalid" | "already_rated" | "not_buyer";
 
 type DeliveryState = {
   deliveries: Delivery[];
@@ -57,6 +58,9 @@ type DeliveryState = {
   advance: (deliveryId: string, riderId: string) => StepResult;
   completeDelivery: (deliveryId: string, riderId: string, otp: string) => CompleteResult;
   reportFailure: (deliveryId: string, riderId: string, reason: FailureReason) => StepResult;
+  // The buyer rates the rider, once, after a completed delivery. Only the
+  // phone that placed the order may rate it.
+  rateDelivery: (deliveryId: string, buyerPhone: string, stars: number, comment?: string) => RateResult;
 };
 
 // ---- Selectors (pure, so pages and tests can use them on any list) ----
@@ -263,6 +267,29 @@ export const useDeliveryStore = create<DeliveryState>()(
             amountGHS: delivery.codAmountGHS,
           });
         }
+        return "ok";
+      },
+
+      rateDelivery: (deliveryId, buyerPhone, stars, comment) => {
+        const delivery = get().deliveries.find((d) => d.id === deliveryId);
+        if (!delivery || delivery.status !== "delivered" || !delivery.riderId) return "invalid";
+        if (!Number.isInteger(stars) || stars < 1 || stars > 5) return "invalid";
+        if (delivery.rating) return "already_rated";
+
+        const order = useOrdersStore
+          .getState()
+          .orders.find((o) => o.groups.some((g) => g.id === delivery.orderGroupId));
+        if (!order) return "invalid";
+        if (order.buyerPhone && order.buyerPhone !== buyerPhone) return "not_buyer";
+
+        const trimmed = comment?.trim().slice(0, 200);
+        set((state) => ({
+          deliveries: patchDelivery(state.deliveries, deliveryId, (d) => ({
+            ...d,
+            rating: { stars, ...(trimmed ? { comment: trimmed } : {}), at: Date.now() },
+          })),
+        }));
+        useRiderIdentityStore.getState().recordRating(delivery.riderId, stars);
         return "ok";
       },
 

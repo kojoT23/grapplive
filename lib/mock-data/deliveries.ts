@@ -73,6 +73,13 @@ export const OTP_MAX_ATTEMPTS = 5;
 
 export type DeliveryHistoryEntry = { status: DeliveryStatus; at: number };
 
+// A buyer's rating of the rider, left once after the delivery is done.
+export type DeliveryRating = {
+  stars: number; // 1–5
+  comment?: string;
+  at: number;
+};
+
 export type Delivery = {
   id: string;
   orderGroupId: string;
@@ -103,6 +110,7 @@ export type Delivery = {
   declinedBy: string[]; // rider ids who declined or let the offer expire
   offerSeenAt: Record<string, number>; // rider id -> when the offer was first shown
   failureReason?: FailureReason;
+  rating?: DeliveryRating;
   createdAt: number;
   history: DeliveryHistoryEntry[];
 };
@@ -123,4 +131,20 @@ export function estimateTrip(seed: string): {
   const feeGHS = 8 + Math.round(dropoffKm * 1.5);
   const etaMinutes = 10 + Math.round((pickupKm + dropoffKm) * 3);
   return { pickupKm, dropoffKm, feeGHS, etaMinutes };
+}
+
+// When the buyer can expect the rider, as a point in time: when the rider
+// accepted plus the estimated trip time. It is an ESTIMATE counted down on
+// the buyer's screen, not live tracking (that needs the backend).
+export function etaTarget(d: Delivery): number | null {
+  const acceptedAt = d.history.find((h) => h.status === "heading_to_pickup")?.at;
+  return acceptedAt === undefined ? null : acceptedAt + d.etaMinutes * 60_000;
+}
+
+// Whole minutes left until the ETA (0 once it has passed). null when there's
+// no ETA yet or `nowMs` isn't a real time (the server-side placeholder).
+export function minutesLeft(d: Delivery, nowMs: number): number | null {
+  const target = etaTarget(d);
+  if (target === null || nowMs <= 0) return null;
+  return Math.max(0, Math.ceil((target - nowMs) / 60_000));
 }

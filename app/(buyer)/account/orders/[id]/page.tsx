@@ -1,8 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { IconArrowLeft, IconCircleCheck, IconCircle, IconPhone } from "@tabler/icons-react";
+import { IconArrowLeft, IconCircleCheck, IconCircle, IconPhone, IconStar, IconStarFilled } from "@tabler/icons-react";
 import { useOrdersStore } from "@/lib/store/useOrdersStore";
 import { flattenGroups, groupTotal, type OrderStatus } from "@/lib/mock-data/orders";
 import { useDeliveryStore, latestDeliveryForGroup } from "@/lib/store/useDeliveryStore";
@@ -11,7 +12,11 @@ import {
   ACTIVE_DELIVERY_STATUSES,
   deliveryStatusLabels,
   failureReasonLabels,
+  minutesLeft,
+  type Delivery,
 } from "@/lib/mock-data/deliveries";
+import { useNow } from "@/lib/hooks/useNow";
+import { useAppStore } from "@/lib/store/useAppStore";
 
 const ALL_STEPS: { status: OrderStatus; fallbackLabel: string }[] = [
   { status: "awaiting_confirmation", fallbackLabel: "Order placed" },
@@ -22,6 +27,76 @@ const ALL_STEPS: { status: OrderStatus; fallbackLabel: string }[] = [
   { status: "delivered", fallbackLabel: "Delivered" },
 ];
 
+// After a completed delivery the buyer rates their rider once, 1–5 stars
+// with an optional note. Feeds the rider's average rating.
+function RateRider({ delivery }: { delivery: Delivery }) {
+  const phone = useAppStore((s) => s.phone);
+  const rateDelivery = useDeliveryStore((s) => s.rateDelivery);
+  const [stars, setStars] = useState(0);
+  const [comment, setComment] = useState("");
+  const [error, setError] = useState("");
+
+  if (delivery.rating) {
+    return (
+      <div className="border border-gl-border rounded-lg p-3 mb-4">
+        <div className="text-[10px] font-semibold text-gl-text mb-1">YOUR RATING FOR {delivery.riderName?.toUpperCase()}</div>
+        <div className="flex gap-0.5 text-gl-amber">
+          {[1, 2, 3, 4, 5].map((n) =>
+            n <= delivery.rating!.stars ? <IconStarFilled key={n} size={16} /> : <IconStar key={n} size={16} />
+          )}
+        </div>
+        {delivery.rating.comment && (
+          <div className="text-[10px] text-gl-text-secondary mt-1">{delivery.rating.comment}</div>
+        )}
+      </div>
+    );
+  }
+
+  const handleSubmit = () => {
+    const result = rateDelivery(delivery.id, phone, stars, comment);
+    if (result === "not_buyer") setError("Only the person who placed this order can rate the delivery.");
+    else if (result !== "ok") setError("Couldn't save your rating. Please try again.");
+  };
+
+  return (
+    <div className="border border-gl-border rounded-lg p-3 mb-4">
+      <div className="text-[11px] font-semibold text-gl-text mb-0.5">How was your delivery?</div>
+      <div className="text-[10px] text-gl-text-secondary mb-2">Rate {delivery.riderName}</div>
+      <div className="flex gap-1 mb-2">
+        {[1, 2, 3, 4, 5].map((n) => (
+          <button
+            key={n}
+            onClick={() => {
+              setStars(n);
+              setError("");
+            }}
+            aria-label={`${n} star${n > 1 ? "s" : ""}`}
+            className="text-gl-amber active:scale-90 transition-transform"
+          >
+            {n <= stars ? <IconStarFilled size={26} /> : <IconStar size={26} />}
+          </button>
+        ))}
+      </div>
+      <input
+        type="text"
+        value={comment}
+        onChange={(e) => setComment(e.target.value)}
+        maxLength={200}
+        placeholder="Add a note (optional)"
+        className="w-full border border-gl-border-strong rounded-lg px-3 py-2 text-[12px] text-gl-text outline-none mb-2 transition-colors focus:border-gl-brand"
+      />
+      {error && <p className="text-[10px] text-gl-red mb-1.5">{error}</p>}
+      <button
+        onClick={handleSubmit}
+        disabled={stars === 0}
+        className="w-full bg-gl-brand text-white rounded-lg py-2 text-[12px] font-semibold active:opacity-90 transition-opacity disabled:opacity-40"
+      >
+        Submit rating
+      </button>
+    </div>
+  );
+}
+
 export default function BuyerOrderDetailPage() {
   const params = useParams<{ id: string }>();
   const orders = useOrdersStore((s) => s.orders);
@@ -29,6 +104,7 @@ export default function BuyerOrderDetailPage() {
   const delivery = useDeliveryStore((s) =>
     latestDeliveryForGroup(s.deliveries, params.id)
   );
+  const now = useNow();
 
   if (!group) {
     return (
@@ -56,6 +132,7 @@ export default function BuyerOrderDetailPage() {
       : stepsForOrder;
 
   const deliveryDetails = orders.find((o) => o.id === group.orderId)?.deliveryDetails;
+  const etaMinutesLeft = delivery ? minutesLeft(delivery, now) : null;
   const riderForDelivery =
     delivery?.riderId ? getRiderByIdSync(delivery.riderId) : undefined;
   const deliveryInProgress =
@@ -133,7 +210,13 @@ export default function BuyerOrderDetailPage() {
               <div>
                 <div className="text-[12px] font-semibold text-gl-text">{delivery.riderName}</div>
                 <div className="text-[10px] text-gl-text-secondary">
-                  About {delivery.etaMinutes} min away when accepted
+                  {delivery.status === "at_dropoff"
+                    ? "Your rider has arrived"
+                    : etaMinutesLeft === null
+                      ? ""
+                      : etaMinutesLeft > 0
+                        ? `Estimated arrival in about ${etaMinutesLeft} min`
+                        : "Arriving any moment now"}
                 </div>
               </div>
               {riderForDelivery && (
@@ -154,6 +237,8 @@ export default function BuyerOrderDetailPage() {
             </div>
           </div>
         )}
+
+        {delivery?.status === "delivered" && delivery.riderName && <RateRider delivery={delivery} />}
 
         {group.status === "ready_for_pickup" && delivery?.status === "failed" && delivery.failureReason && (
           <div className="border border-gl-border rounded-lg p-3 mb-4">

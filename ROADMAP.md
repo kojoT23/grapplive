@@ -560,11 +560,23 @@ and the OTP. AGENTS.md §4.4, §6 (Rider), §10 and §17 hold the spec.
    seeing the buyer move, the buyer watching the rider on a map) needs the
    backend; and a map to drop/adjust the pin by hand, for people ordering
    from somewhere other than where they want delivery.
-4. ⏳ **Buyer side, remaining.** DONE already (in step 2): rider name, live
-   trip status, call-rider button, ETA at acceptance and the delivery code
-   on the buyer's order page. STILL TO DO: a live (counting-down) ETA, the
-   buyer rating the rider after delivery (fills `RiderIdentity.rating`), and
-   a "delivery failed" follow-up for the buyer beyond today's notice.
+4. ✅ **Buyer side.** The buyer's order page shows the rider, live trip
+   status, a call button, the delivery code and the delivery details; it now
+   also shows a **counting-down ETA** ("Estimated arrival in about N min",
+   "Your rider has arrived", "Arriving any moment now"; computed from when
+   the rider accepted plus the estimated trip, refreshed every 30s — an
+   estimate, not live tracking) and, after delivery, a **1–5 star rating
+   with an optional note** (`rateDelivery`: once per delivery, only the
+   phone that placed the order, whole stars 1–5). Ratings feed the rider's
+   running average (`RiderIdentity.rating` / `ratingCount`), shown on the
+   rider's Jobs screen and per delivery in their History. *Still open:*
+   true live tracking (rider's moving position on a map) and live location
+   sharing need the backend; no dispute/report flow for a bad delivery; no
+   seller-side view of ratings.
+
+**The delivery side is feature-complete for the prototype.** What remains
+is backend work (real accounts, shared dispatch across devices, live
+tracking, real payouts/SMS), and the GrappStore staff role.
 
 ---
 
@@ -596,6 +608,9 @@ lower return at this stage:
 - `lib/store/useStoreProfileStore.test.ts` (added later, 8 tests) — the
   per-seller storefront profile: seeding, isolation between sellers, and
   the migration from the old single-seller shape.
+- `lib/store/useDeliveryRating.test.ts` (8 tests) — rating a delivery
+  (once, only the buyer, 1–5 whole stars, running average) and the
+  counting-down ETA.
 - `lib/mock-data/deliveryPin.test.ts` (9 tests) — the location pin:
   validity, counting as an address, cleaning, the directions link, the GPS
   helper (fresh high-accuracy fix, each failure reason) and pin -> delivery.

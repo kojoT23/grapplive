@@ -59,6 +59,7 @@ export default function RiderHistoryPage() {
                 {formatWhen(doneAt)}
                 {!delivered && d.failureReason ? ` · ${failureReasonLabels[d.failureReason]}` : ""}
                 {d.codAmountGHS > 0 && delivered ? ` · Collected GHS ${d.codAmountGHS} cash` : ""}
+                {d.rating ? ` · Rated ${"★".repeat(d.rating.stars)}${"☆".repeat(5 - d.rating.stars)}` : ""}
               </div>
             </div>
           );

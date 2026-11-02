@@ -27,7 +27,8 @@ export type RiderIdentity = {
   vehicle: RiderVehicle;
   area: string; // one of serviceAreas' names
   tripsCompleted: number;
-  rating: number | null; // null until a buyer has rated a delivery
+  rating: number | null; // average stars; null until a buyer has rated a delivery
+  ratingCount?: number; // how many ratings the average is of
 };
 
 export type NewRiderInput = {
@@ -45,6 +46,9 @@ type RiderIdentityState = {
   getOrCreateRiderId: (phone: string, input: NewRiderInput) => string;
   // Called by the delivery side when a delivery is completed.
   recordCompletedTrip: (riderId: string) => void;
+  // Called by the delivery side when a buyer rates a delivery (1–5 stars):
+  // folds it into the rider's running average.
+  recordRating: (riderId: string, stars: number) => void;
 };
 
 let riderCounter = 0;
@@ -79,6 +83,21 @@ export const useRiderIdentityStore = create<RiderIdentityState>()(
         }));
         return identity.id;
       },
+
+      recordRating: (riderId, stars) =>
+        set((state) => {
+          const entry = Object.entries(state.identitiesByPhone).find(([, r]) => r.id === riderId);
+          if (!entry) return state;
+          const [phone, rider] = entry;
+          const count = rider.ratingCount ?? 0;
+          const average = ((rider.rating ?? 0) * count + stars) / (count + 1);
+          return {
+            identitiesByPhone: {
+              ...state.identitiesByPhone,
+              [phone]: { ...rider, rating: Math.round(average * 100) / 100, ratingCount: count + 1 },
+            },
+          };
+        }),
 
       recordCompletedTrip: (riderId) =>
         set((state) => {
