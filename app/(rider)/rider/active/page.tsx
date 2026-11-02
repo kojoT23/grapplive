@@ -49,6 +49,7 @@ export default function RiderActivePage() {
   const [otpError, setOtpError] = useState("");
   const [showFailure, setShowFailure] = useState(false);
   const [finishedId, setFinishedId] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   if (isChecking || !riderHydrated || !deliveriesHydrated) {
     return (
@@ -158,13 +159,38 @@ export default function RiderActivePage() {
 
       <div className="mx-3 md:mx-5 mb-2 border border-gl-border rounded-lg p-3">
         <div className="text-[9px] text-gl-text-secondary mb-0.5">Drop-off · {active.dropoffKm} km</div>
-        <div className="text-[12px] font-semibold text-gl-text">{active.dropoffArea}</div>
-        <div className="text-[10px] text-gl-text-secondary mb-2">
+        {active.customerName && (
+          <div className="text-[12px] font-semibold text-gl-text">{active.customerName}</div>
+        )}
+        <div className="text-[11px] text-gl-text">{active.dropoffArea}</div>
+        {active.digitalAddress && (
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-[13px] font-bold tracking-wide text-gl-text">{active.digitalAddress}</span>
+            <button
+              onClick={() => {
+                navigator.clipboard?.writeText(active.digitalAddress ?? "");
+                setCopied(true);
+              }}
+              className="text-[10px] font-semibold text-gl-brand active:opacity-60"
+            >
+              {copied ? "Copied" : "Copy"}
+            </button>
+          </div>
+        )}
+        {active.landmark && (
+          <div className="text-[11px] text-gl-text mt-1">{active.landmark}</div>
+        )}
+        {!active.digitalAddress && !active.landmark && (
+          <div className="text-[10px] text-gl-amber mt-1">
+            No address details on this order — call the customer to find them.
+          </div>
+        )}
+        <div className="text-[10px] text-gl-text-secondary mt-1 mb-2">
           {active.customerPhone || "No customer phone on this order"}
         </div>
         <div className="flex gap-4">
           <a
-            href={mapsLink(active.dropoffArea)}
+            href={mapsLink(`${active.landmark ?? ""} ${active.dropoffArea}`.trim())}
             target="_blank"
             rel="noreferrer"
             className="inline-flex items-center gap-1 text-[11px] font-semibold text-gl-brand active:opacity-60"

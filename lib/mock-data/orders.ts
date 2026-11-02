@@ -1,3 +1,5 @@
+import type { DeliveryDetails } from "@/lib/mock-data/deliveryDetails";
+
 // "instant_confirm" (marketplace) and "grapplive_fulfilled" (GrappStore)
 // used to share the same value. They mean different things in practice:
 // instant_confirm is a paid opt-in a marketplace buyer chooses to skip
@@ -75,6 +77,9 @@ export type Order = {
   // landmark) replace these once checkout collects them.
   buyerPhone?: string;
   deliveryArea?: string;
+  // Who to deliver to and how to find them (name, digital address,
+  // landmark), collected at checkout.
+  deliveryDetails?: DeliveryDetails;
 };
 
 export const initialOrders: Order[] = [

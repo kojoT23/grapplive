@@ -538,6 +538,20 @@ and the OTP. AGENTS.md §4.4, §6 (Rider), §10 and §17 hold the spec.
    cash-out doesn't move real money (same as seller payouts); the cash
    limit is a flat number; no dispute flow if a seller denies receiving
    handed-over cash; the platform's cut of delivery fees is not modeled.
+   **Delivery address (added after step 3).** Checkout now has a
+   *Delivery details* section: name, an optional GhanaPost GPS digital
+   address (`GA-123-4567`; typed loosely and normalised) and a
+   landmark/directions box — a digital address or a landmark is required.
+   Pre-filled next time from what that phone used last
+   (`useBuyerDetailsStore`, keyed by phone). It is saved on the order
+   (`Order.deliveryDetails`), copied onto the delivery when a rider is
+   requested, and shown to the rider only after they accept (with a Copy
+   button for the digital address); the buyer sees it as "Delivering to" on
+   the order page. Orders placed before this fall back to "call the
+   customer". *Still open:* Google Maps doesn't understand GhanaPost GPS
+   codes, so Navigate searches by landmark + area and the rider copies the
+   code into the GhanaPostGPS app; a real map pin at checkout would fix
+   that properly and belongs with the backend.
 4. ⏳ **Buyer side, remaining.** DONE already (in step 2): rider name, live
    trip status, call-rider button, ETA at acceptance and the delivery code
    on the buyer's order page. STILL TO DO: a live (counting-down) ETA, the
@@ -574,6 +588,9 @@ lower return at this stage:
 - `lib/store/useStoreProfileStore.test.ts` (added later, 8 tests) — the
   per-seller storefront profile: seeding, isolation between sellers, and
   the migration from the old single-seller shape.
+- `lib/mock-data/deliveryDetails.test.ts` (12 tests) — digital address
+  normalising/validation, the name + (address or landmark) rule, details
+  carried order -> delivery, and saved per phone.
 - `lib/store/useCashLedgerStore.test.ts` (13 tests) — COD: the cash a
   delivery collects, the held -> pending -> settled trail and who may do
   each step, the cash limit, earnings by period and cash-out.

@@ -55,6 +55,7 @@ export default function BuyerOrderDetailPage() {
       ? stepsForOrder.filter((s) => s.status !== "awaiting_confirmation" || group.paymentMethod === "direct_momo")
       : stepsForOrder;
 
+  const deliveryDetails = orders.find((o) => o.id === group.orderId)?.deliveryDetails;
   const riderForDelivery =
     delivery?.riderId ? getRiderByIdSync(delivery.riderId) : undefined;
   const deliveryInProgress =
@@ -97,6 +98,19 @@ export default function BuyerOrderDetailPage() {
             Total: GHS {groupTotal(group).toLocaleString("en-GH")}
           </div>
         </div>
+
+        {deliveryDetails && (
+          <div className="border border-gl-border rounded-lg p-3 mb-4">
+            <div className="text-[10px] font-semibold text-gl-text mb-0.5">DELIVERING TO</div>
+            <div className="text-[11px] text-gl-text">{deliveryDetails.name}</div>
+            {deliveryDetails.digitalAddress && (
+              <div className="text-[11px] font-semibold text-gl-text">{deliveryDetails.digitalAddress}</div>
+            )}
+            {deliveryDetails.landmark && (
+              <div className="text-[10px] text-gl-text-secondary">{deliveryDetails.landmark}</div>
+            )}
+          </div>
+        )}
 
         {group.paymentMethod === "cash_on_delivery" && group.status !== "delivered" && (
           <div className="border border-gl-border rounded-lg p-3 mb-4">

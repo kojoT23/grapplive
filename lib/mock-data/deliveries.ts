@@ -79,6 +79,12 @@ export type Delivery = {
   pickupArea: string;
   dropoffArea: string;
   customerPhone: string; // "" when the order never captured one
+  // Who to deliver to and how to find them, copied from the order at the
+  // time of the request. Optional: older deliveries predate checkout
+  // collecting them.
+  customerName?: string;
+  digitalAddress?: string;
+  landmark?: string;
   pickupKm: number;
   dropoffKm: number;
   feeGHS: number;

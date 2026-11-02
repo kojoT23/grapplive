@@ -34,6 +34,9 @@ export function requestDeliveryForGroup(groupId: string): void {
     pickupArea,
     dropoffArea: order.deliveryArea ?? pickupArea,
     customerPhone: order.buyerPhone ?? "",
+    customerName: order.deliveryDetails?.name,
+    digitalAddress: order.deliveryDetails?.digitalAddress,
+    landmark: order.deliveryDetails?.landmark,
     // Cash on delivery: the rider collects the item total from the buyer,
     // and that cash is tracked in the cash ledger until it reaches the
     // seller. Every other payment method is already paid.

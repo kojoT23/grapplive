@@ -4,6 +4,17 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { IconArrowLeft } from "@tabler/icons-react";
 import { useCartStore } from "@/lib/store/useCartStore";
+import { useAppStore } from "@/lib/store/useAppStore";
+import { useLocationStore } from "@/lib/store/useLocationStore";
+import { useBuyerDetailsStore } from "@/lib/store/useBuyerDetailsStore";
+import {
+  EMPTY_DELIVERY_DETAILS,
+  cleanDeliveryDetails,
+  hasDeliveryDetailsErrors,
+  validateDeliveryDetails,
+  type DeliveryDetails,
+  type DeliveryDetailsErrors,
+} from "@/lib/mock-data/deliveryDetails";
 import { useOrdersStore, type NewOrderGroupInput } from "@/lib/store/useOrdersStore";
 import { getProductById } from "@/lib/mock-data/catalog";
 import type { PaymentMethod } from "@/lib/mock-data/orders";
@@ -21,6 +32,26 @@ export default function CheckoutPage() {
   const placeOrder = useOrdersStore((s) => s.placeOrder);
   const [method, setMethod] = useState<PaymentMethod>("instant_confirm");
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+
+  // Delivery details: pre-filled from what this phone used last time, once
+  // the saved details have loaded. Synced during render (once) rather than
+  // in an effect, same pattern as the customer notes box.
+  const phone = useAppStore((s) => s.phone);
+  const areaName = useLocationStore((s) => s.areaName);
+  const savedDetails = useBuyerDetailsStore((s) => (phone ? s.detailsByPhone[phone] : undefined));
+  const detailsHydrated = useBuyerDetailsStore((s) => s.hasHydrated);
+  const saveDetails = useBuyerDetailsStore((s) => s.saveDetails);
+  const [details, setDetails] = useState<DeliveryDetails>(EMPTY_DELIVERY_DETAILS);
+  const [detailsErrors, setDetailsErrors] = useState<DeliveryDetailsErrors>({});
+  const [prefilled, setPrefilled] = useState(false);
+  if (detailsHydrated && !prefilled) {
+    setPrefilled(true);
+    if (savedDetails) setDetails(savedDetails);
+  }
+  const updateDetail = (field: keyof DeliveryDetails, value: string) => {
+    setDetails((d) => ({ ...d, [field]: value }));
+    setDetailsErrors({});
+  };
 
   // Resolved once, reused both for the on-screen summary and for building
   // the OrderGroups on submit — one source of truth instead of two
@@ -68,6 +99,14 @@ export default function CheckoutPage() {
   }, {});
 
   const handlePlaceOrder = () => {
+    const errors = validateDeliveryDetails(details);
+    if (hasDeliveryDetailsErrors(errors)) {
+      setDetailsErrors(errors);
+      return;
+    }
+    const cleanDetails = cleanDeliveryDetails(details);
+    if (phone) saveDetails(phone, cleanDetails);
+
     setIsPlacingOrder(true);
     setTimeout(() => {
       // Group cart items by seller — each seller becomes one OrderGroup
@@ -95,7 +134,7 @@ export default function CheckoutPage() {
         }
       });
 
-      placeOrder(Array.from(groupsBySeller.values()));
+      placeOrder(Array.from(groupsBySeller.values()), cleanDetails);
       clearCart();
       router.push("/checkout/confirmation");
     }, 500);
@@ -108,6 +147,41 @@ export default function CheckoutPage() {
           <IconArrowLeft size={16} className="text-gl-text" />
         </button>
         <h1 className="text-[14px] font-semibold text-gl-text">How do you want to pay?</h1>
+      </div>
+
+      <div className="border border-gl-border rounded-lg p-3 mb-4">
+        <h2 className="text-[11px] font-semibold text-gl-text mb-0.5">Delivery details</h2>
+        <p className="text-[9px] text-gl-text-secondary mb-2.5">
+          {areaName ? `Delivering in ${areaName}. ` : ""}Your rider sees these only once they accept your order.
+        </p>
+        <input
+          type="text"
+          value={details.name}
+          onChange={(e) => updateDetail("name", e.target.value)}
+          placeholder="Your name"
+          autoComplete="name"
+          className="w-full border border-gl-border-strong rounded-lg px-3 py-2 text-[12px] text-gl-text outline-none mb-1 transition-colors focus:border-gl-brand"
+        />
+        {detailsErrors.name && <p className="text-[10px] text-gl-red mb-1">{detailsErrors.name}</p>}
+        <input
+          type="text"
+          value={details.digitalAddress}
+          onChange={(e) => updateDetail("digitalAddress", e.target.value)}
+          placeholder="Digital address, e.g. GA-123-4567 (optional)"
+          autoCapitalize="characters"
+          className="w-full border border-gl-border-strong rounded-lg px-3 py-2 text-[12px] text-gl-text outline-none mt-1.5 mb-1 transition-colors focus:border-gl-brand"
+        />
+        {detailsErrors.digitalAddress && (
+          <p className="text-[10px] text-gl-red mb-1">{detailsErrors.digitalAddress}</p>
+        )}
+        <textarea
+          value={details.landmark}
+          onChange={(e) => updateDetail("landmark", e.target.value)}
+          placeholder="Landmark or directions, e.g. opposite the Shell station, blue gate"
+          rows={2}
+          className="w-full border border-gl-border-strong rounded-lg px-3 py-2 text-[12px] text-gl-text outline-none mt-1.5 transition-colors focus:border-gl-brand resize-none"
+        />
+        {detailsErrors.form && <p className="text-[10px] text-gl-red mt-1">{detailsErrors.form}</p>}
       </div>
 
       {/* Real item list before payment, grouped by seller so a multi-seller

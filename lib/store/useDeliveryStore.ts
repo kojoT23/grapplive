@@ -34,6 +34,9 @@ export type NewDeliveryInput = {
   pickupArea: string;
   dropoffArea: string;
   customerPhone: string;
+  customerName?: string;
+  digitalAddress?: string;
+  landmark?: string;
   codAmountGHS: number;
 };
 
@@ -132,6 +135,9 @@ export const useDeliveryStore = create<DeliveryState>()(
           pickupArea: input.pickupArea,
           dropoffArea: input.dropoffArea,
           customerPhone: input.customerPhone,
+          customerName: input.customerName,
+          digitalAddress: input.digitalAddress,
+          landmark: input.landmark,
           ...trip,
           codAmountGHS: input.codAmountGHS,
           status: "offered",

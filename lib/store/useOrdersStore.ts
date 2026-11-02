@@ -9,6 +9,7 @@ import {
   type OrderStatus,
   type PaymentMethod,
 } from "@/lib/mock-data/orders";
+import type { DeliveryDetails } from "@/lib/mock-data/deliveryDetails";
 import { useAppStore } from "@/lib/store/useAppStore";
 import { useLocationStore } from "@/lib/store/useLocationStore";
 
@@ -32,7 +33,7 @@ type OrdersState = {
   orders: Order[];
   hasHydrated: boolean;
   setHasHydrated: (value: boolean) => void;
-  placeOrder: (groups: NewOrderGroupInput[]) => void;
+  placeOrder: (groups: NewOrderGroupInput[], deliveryDetails?: DeliveryDetails) => void;
   confirmPayment: (groupId: string) => void;
   // Seller asks for a rider: the order waits as ready_for_pickup. The
   // matching delivery offer is created by requestDeliveryForGroup
@@ -102,7 +103,7 @@ export const useOrdersStore = create<OrdersState>()(
       hasHydrated: false,
       setHasHydrated: (value) => set({ hasHydrated: value }),
 
-      placeOrder: (groupInputs) =>
+      placeOrder: (groupInputs, deliveryDetails) =>
         set((state) => {
           const orderId = nextOrderId(state.orders);
 
@@ -124,7 +125,7 @@ export const useOrdersStore = create<OrdersState>()(
           // The buyer's phone and delivery area, so a rider can reach them.
           const buyerPhone = useAppStore.getState().phone || undefined;
           const deliveryArea = useLocationStore.getState().areaName ?? undefined;
-          const newOrder: Order = { id: orderId, groups, buyerPhone, deliveryArea };
+          const newOrder: Order = { id: orderId, groups, buyerPhone, deliveryArea, deliveryDetails };
           return { orders: [newOrder, ...state.orders] };
         }),
 
