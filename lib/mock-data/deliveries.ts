@@ -4,6 +4,8 @@
 // out_for_delivery -> delivered); the finer rider steps (heading to pickup,
 // arrived, ...) live here.
 
+import type { DeliveryPin } from "@/lib/mock-data/deliveryDetails";
+
 export type DeliveryStatus =
   | "offered" // created, waiting for a rider to accept
   | "heading_to_pickup" // accepted; rider is going to the seller
@@ -85,6 +87,7 @@ export type Delivery = {
   customerName?: string;
   digitalAddress?: string;
   landmark?: string;
+  pin?: DeliveryPin; // the buyer's shared location, if they shared one
   pickupKm: number;
   dropoffKm: number;
   feeGHS: number;

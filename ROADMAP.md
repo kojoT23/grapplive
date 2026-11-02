@@ -548,10 +548,18 @@ and the OTP. AGENTS.md §4.4, §6 (Rider), §10 and §17 hold the spec.
    requested, and shown to the rider only after they accept (with a Copy
    button for the digital address); the buyer sees it as "Delivering to" on
    the order page. Orders placed before this fall back to "call the
-   customer". *Still open:* Google Maps doesn't understand GhanaPost GPS
-   codes, so Navigate searches by landmark + area and the rider copies the
-   code into the GhanaPostGPS app; a real map pin at checkout would fix
-   that properly and belongs with the backend.
+   customer". **Location pin:** checkout also has *Share my current location*
+   (like sending your location on WhatsApp): a one-tap, high-accuracy GPS
+   fix saved with the order as `DeliveryDetails.pin` and counted as enough
+   on its own to deliver to. The rider sees "customer shared their
+   location" and the Navigate button opens Google Maps directions straight
+   to the pin. It is a snapshot — it's never pre-filled for the next order,
+   and the screen warns to share it only while standing at the delivery
+   address. It needs https (works on Vercel, not on a plain
+   `http://192.168…` address). *Still open:* **live** location (the rider
+   seeing the buyer move, the buyer watching the rider on a map) needs the
+   backend; and a map to drop/adjust the pin by hand, for people ordering
+   from somewhere other than where they want delivery.
 4. ⏳ **Buyer side, remaining.** DONE already (in step 2): rider name, live
    trip status, call-rider button, ETA at acceptance and the delivery code
    on the buyer's order page. STILL TO DO: a live (counting-down) ETA, the
@@ -588,6 +596,9 @@ lower return at this stage:
 - `lib/store/useStoreProfileStore.test.ts` (added later, 8 tests) — the
   per-seller storefront profile: seeding, isolation between sellers, and
   the migration from the old single-seller shape.
+- `lib/mock-data/deliveryPin.test.ts` (9 tests) — the location pin:
+  validity, counting as an address, cleaning, the directions link, the GPS
+  helper (fresh high-accuracy fix, each failure reason) and pin -> delivery.
 - `lib/mock-data/deliveryDetails.test.ts` (12 tests) — digital address
   normalising/validation, the name + (address or landmark) rule, details
   carried order -> delivery, and saved per phone.

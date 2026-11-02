@@ -8,6 +8,7 @@ import { TabBar } from "@/components/ui/TabBar";
 import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
 import { useCurrentRider } from "@/lib/hooks/useCurrentRider";
 import { riderTabs } from "@/lib/nav/rider-tabs";
+import { isValidPin, mapsDirectionsLink } from "@/lib/mock-data/deliveryDetails";
 import { useDeliveryStore, activeDeliveryFor } from "@/lib/store/useDeliveryStore";
 import {
   NEXT_STEP,
@@ -180,7 +181,12 @@ export default function RiderActivePage() {
         {active.landmark && (
           <div className="text-[11px] text-gl-text mt-1">{active.landmark}</div>
         )}
-        {!active.digitalAddress && !active.landmark && (
+        {isValidPin(active.pin) && (
+          <div className="text-[10px] text-gl-text-secondary mt-1">
+            📍 Customer shared their location (within {active.pin.accuracyM} m)
+          </div>
+        )}
+        {!active.digitalAddress && !active.landmark && !isValidPin(active.pin) && (
           <div className="text-[10px] text-gl-amber mt-1">
             No address details on this order — call the customer to find them.
           </div>
@@ -190,7 +196,11 @@ export default function RiderActivePage() {
         </div>
         <div className="flex gap-4">
           <a
-            href={mapsLink(`${active.landmark ?? ""} ${active.dropoffArea}`.trim())}
+            href={
+              isValidPin(active.pin)
+                ? mapsDirectionsLink(active.pin)
+                : mapsLink(`${active.landmark ?? ""} ${active.dropoffArea}`.trim())
+            }
             target="_blank"
             rel="noreferrer"
             className="inline-flex items-center gap-1 text-[11px] font-semibold text-gl-brand active:opacity-60"

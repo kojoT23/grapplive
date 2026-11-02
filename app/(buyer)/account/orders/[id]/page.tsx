@@ -109,6 +109,9 @@ export default function BuyerOrderDetailPage() {
             {deliveryDetails.landmark && (
               <div className="text-[10px] text-gl-text-secondary">{deliveryDetails.landmark}</div>
             )}
+            {deliveryDetails.pin && (
+              <div className="text-[10px] text-gl-brand font-semibold">📍 Location shared</div>
+            )}
           </div>
         )}
 

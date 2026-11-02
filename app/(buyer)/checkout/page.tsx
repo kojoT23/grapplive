@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { IconArrowLeft } from "@tabler/icons-react";
+import { IconArrowLeft, IconMapPin } from "@tabler/icons-react";
 import { useCartStore } from "@/lib/store/useCartStore";
 import { useAppStore } from "@/lib/store/useAppStore";
 import { useLocationStore } from "@/lib/store/useLocationStore";
@@ -15,6 +15,14 @@ import {
   type DeliveryDetails,
   type DeliveryDetailsErrors,
 } from "@/lib/mock-data/deliveryDetails";
+import { getCurrentPin, type PinResult } from "@/lib/utils/getCurrentPin";
+
+const pinErrorMessages: Record<Extract<PinResult, { ok: false }>["reason"], string> = {
+  denied: "Location is turned off for this site. Turn it on in your browser settings, or add a landmark instead.",
+  unavailable: "Couldn't find your location. Try again outdoors, or add a landmark instead.",
+  unsupported: "This browser can't share location. Add a landmark instead.",
+  timeout: "That took too long. Try again, or add a landmark instead.",
+};
 import { useOrdersStore, type NewOrderGroupInput } from "@/lib/store/useOrdersStore";
 import { getProductById } from "@/lib/mock-data/catalog";
 import type { PaymentMethod } from "@/lib/mock-data/orders";
@@ -44,10 +52,27 @@ export default function CheckoutPage() {
   const [details, setDetails] = useState<DeliveryDetails>(EMPTY_DELIVERY_DETAILS);
   const [detailsErrors, setDetailsErrors] = useState<DeliveryDetailsErrors>({});
   const [prefilled, setPrefilled] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
+  const [pinError, setPinError] = useState("");
   if (detailsHydrated && !prefilled) {
     setPrefilled(true);
-    if (savedDetails) setDetails(savedDetails);
+    // A saved location pin is never pre-filled: it'd be where they stood
+    // last time, not necessarily where this order is going.
+    if (savedDetails) setDetails({ ...savedDetails, pin: undefined });
   }
+
+  const handleSharePin = async () => {
+    setIsLocating(true);
+    setPinError("");
+    const result = await getCurrentPin();
+    setIsLocating(false);
+    if (result.ok) {
+      setDetails((d) => ({ ...d, pin: result.pin }));
+      setDetailsErrors({});
+    } else {
+      setPinError(pinErrorMessages[result.reason]);
+    }
+  };
   const updateDetail = (field: keyof DeliveryDetails, value: string) => {
     setDetails((d) => ({ ...d, [field]: value }));
     setDetailsErrors({});
@@ -105,7 +130,8 @@ export default function CheckoutPage() {
       return;
     }
     const cleanDetails = cleanDeliveryDetails(details);
-    if (phone) saveDetails(phone, cleanDetails);
+    // The pin is a one-time snapshot, so only the typed details are remembered.
+    if (phone) saveDetails(phone, { ...cleanDetails, pin: undefined });
 
     setIsPlacingOrder(true);
     setTimeout(() => {
@@ -181,6 +207,35 @@ export default function CheckoutPage() {
           rows={2}
           className="w-full border border-gl-border-strong rounded-lg px-3 py-2 text-[12px] text-gl-text outline-none mt-1.5 transition-colors focus:border-gl-brand resize-none"
         />
+
+        <div className="mt-2.5">
+          {details.pin ? (
+            <div className="flex items-center justify-between border border-gl-brand rounded-lg px-3 py-2">
+              <div className="flex items-center gap-1.5 text-[11px] font-semibold text-gl-brand">
+                <IconMapPin size={14} /> Location shared
+                <span className="font-normal text-gl-text-secondary">· within {details.pin.accuracyM} m</span>
+              </div>
+              <button
+                onClick={() => setDetails((d) => ({ ...d, pin: undefined }))}
+                className="text-[10px] text-gl-text-secondary active:opacity-60"
+              >
+                Remove
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={handleSharePin}
+              disabled={isLocating}
+              className="w-full flex items-center justify-center gap-1.5 border border-gl-brand text-gl-brand rounded-lg py-2 text-[11px] font-semibold active:bg-gl-brand-soft-bg transition-colors disabled:opacity-60"
+            >
+              <IconMapPin size={14} /> {isLocating ? "Finding you…" : "Share my current location"}
+            </button>
+          )}
+          <p className="text-[9px] text-gl-text-secondary mt-1">
+            Only share this while you&apos;re at the place you want it delivered.
+          </p>
+          {pinError && <p className="text-[10px] text-gl-red mt-1">{pinError}</p>}
+        </div>
         {detailsErrors.form && <p className="text-[10px] text-gl-red mt-1">{detailsErrors.form}</p>}
       </div>
 

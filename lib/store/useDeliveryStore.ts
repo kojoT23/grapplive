@@ -16,6 +16,7 @@ import { useOrdersStore } from "@/lib/store/useOrdersStore";
 import { useRiderStore } from "@/lib/store/useRiderStore";
 import { useCashLedgerStore, heldTotal } from "@/lib/store/useCashLedgerStore";
 import { CASH_HOLD_LIMIT_GHS } from "@/lib/mock-data/cash";
+import type { DeliveryPin } from "@/lib/mock-data/deliveryDetails";
 import { getRiderByIdSync, useRiderIdentityStore } from "@/lib/store/useRiderIdentityStore";
 
 // The prototype's stand-in for the dispatch backend. Deliveries are shared
@@ -37,6 +38,7 @@ export type NewDeliveryInput = {
   customerName?: string;
   digitalAddress?: string;
   landmark?: string;
+  pin?: DeliveryPin;
   codAmountGHS: number;
 };
 
@@ -138,6 +140,7 @@ export const useDeliveryStore = create<DeliveryState>()(
           customerName: input.customerName,
           digitalAddress: input.digitalAddress,
           landmark: input.landmark,
+          pin: input.pin,
           ...trip,
           codAmountGHS: input.codAmountGHS,
           status: "offered",

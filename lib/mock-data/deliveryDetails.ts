@@ -1,12 +1,37 @@
-// What a rider needs to find a customer: who they are, a GhanaPost GPS
-// digital address if they have one, and a landmark / directions (street
-// addressing in Ghana is unreliable, so the digital address and landmark do
-// the real work). At least one of the two is required.
+// What a rider needs to find a customer: who they are, plus at least one of
+// a shared location pin, a GhanaPost GPS digital address, or a landmark /
+// directions (street addressing in Ghana is unreliable, so these do the real
+// work).
+// A shared location pin, like sending "my current location" on WhatsApp: a
+// snapshot of where the buyer was standing when they tapped the button.
+export type DeliveryPin = {
+  lat: number;
+  lng: number;
+  accuracyM: number; // how close the phone says the fix is, in metres
+};
+
 export type DeliveryDetails = {
   name: string;
   digitalAddress: string; // "" when not given
   landmark: string; // "" when not given
+  pin?: DeliveryPin; // only when the buyer shared their location
 };
+
+export function isValidPin(pin: DeliveryPin | undefined): pin is DeliveryPin {
+  return (
+    pin !== undefined &&
+    Number.isFinite(pin.lat) &&
+    Number.isFinite(pin.lng) &&
+    Math.abs(pin.lat) <= 90 &&
+    Math.abs(pin.lng) <= 180
+  );
+}
+
+// Opens turn-by-turn directions to the pin in Google Maps (works in the
+// browser and in the Maps app). This is what a rider taps to navigate.
+export function mapsDirectionsLink(pin: DeliveryPin): string {
+  return `https://www.google.com/maps/dir/?api=1&destination=${pin.lat},${pin.lng}`;
+}
 
 export const EMPTY_DELIVERY_DETAILS: DeliveryDetails = {
   name: "",
@@ -46,8 +71,8 @@ export function validateDeliveryDetails(details: DeliveryDetails): DeliveryDetai
   if (address && !/^[A-Z]{2}-\d{3,5}-\d{4}$/.test(address)) {
     errors.digitalAddress = "That doesn't look like a digital address (e.g. GA-123-4567)";
   }
-  if (!address && landmark.length < 5) {
-    errors.form = "Add your digital address or a landmark so your rider can find you";
+  if (!isValidPin(details.pin) && !address && landmark.length < 5) {
+    errors.form = "Share your location, or add your digital address or a landmark, so your rider can find you";
   }
   return errors;
 }
@@ -62,5 +87,6 @@ export function cleanDeliveryDetails(details: DeliveryDetails): DeliveryDetails 
     name: details.name.trim(),
     digitalAddress: normalizeDigitalAddress(details.digitalAddress),
     landmark: details.landmark.trim(),
+    ...(isValidPin(details.pin) ? { pin: details.pin } : {}),
   };
 }
