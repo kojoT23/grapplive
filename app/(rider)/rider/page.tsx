@@ -112,6 +112,7 @@ export default function RiderJobsPage() {
   const ledgerHydrated = useCashLedgerStore((s) => s.hasHydrated);
   const online = useRiderStore((s) => (rider ? s.onlineByRider[rider.id] === true : false));
   const setOnline = useRiderStore((s) => s.setOnline);
+  const restoreOffer = useDeliveryStore((s) => s.restoreOffer);
 
   if (isChecking || !riderHydrated || !deliveriesHydrated || !statusHydrated || !ledgerHydrated) {
     return (
@@ -142,6 +143,13 @@ export default function RiderJobsPage() {
 
   const active = activeDeliveryFor(deliveries, rider.id);
   const heldCash = heldTotal(cashEntries, rider.id);
+
+  // Why there's nothing to show — so an empty screen is never a mystery.
+  const allOpen = deliveries.filter((d) => d.status === "offered");
+  const skippedByMe = allOpen.filter(
+    (d) => d.pickupArea === rider.area && d.declinedBy.includes(rider.id)
+  );
+  const inOtherAreas = allOpen.filter((d) => d.pickupArea !== rider.area);
   const offer = online && !active ? openOffersFor(deliveries, rider.id, rider.area)[0] : undefined;
 
   return (
@@ -233,6 +241,37 @@ export default function RiderJobsPage() {
               ? "New delivery requests near you will pop up here."
               : "Go online and requests will show up here."}
           </div>
+          {online && (
+            <div className="mt-3 pt-3 border-t border-gl-bg-muted text-left text-[10px] text-gl-text-secondary">
+              {allOpen.length === 0 && (
+                <p>
+                  No requests have been sent yet. A request is created when a seller opens the order and
+                  taps <span className="font-semibold text-gl-text">Request delivery</span>.
+                </p>
+              )}
+              {skippedByMe.length > 0 && (
+                <div className="mb-1.5">
+                  <p className="mb-1">
+                    You skipped {skippedByMe.length} request{skippedByMe.length > 1 ? "s" : ""} (declined or
+                    timed out).
+                  </p>
+                  <button
+                    onClick={() => skippedByMe.forEach((d) => restoreOffer(d.id, rider.id))}
+                    className="font-semibold text-gl-brand active:opacity-60"
+                  >
+                    Show {skippedByMe.length > 1 ? "them" : "it"} again
+                  </button>
+                </div>
+              )}
+              {inOtherAreas.length > 0 && (
+                <p>
+                  {inOtherAreas.length} request{inOtherAreas.length > 1 ? "s are" : " is"} in{" "}
+                  {Array.from(new Set(inOtherAreas.map((d) => d.pickupArea))).join(", ")}. You cover{" "}
+                  {rider.area}.
+                </p>
+              )}
+            </div>
+          )}
         </div>
       )}
 

@@ -13,14 +13,30 @@ export type DeliveryStatus =
   | "out_for_delivery" // parcel picked up; rider is going to the customer
   | "at_dropoff" // rider has arrived at the customer; awaiting OTP
   | "delivered"
-  | "failed"; // see failureReason
+  | "failed" // never got the parcel (seller problem at pickup); see failureReason
+  | "returning" // customer-side failure: the rider still has the parcel and is taking it back
+  | "returned" // the rider says the parcel is back with the seller (seller confirms)
+  | "cancelled"; // called off by the seller before the parcel was picked up
 
 export const ACTIVE_DELIVERY_STATUSES: DeliveryStatus[] = [
   "heading_to_pickup",
   "at_pickup",
   "out_for_delivery",
   "at_dropoff",
+  "returning",
 ];
+
+// The seller can call off a delivery up to the moment the parcel is picked up.
+export const CANCELLABLE_BY_SELLER: DeliveryStatus[] = ["offered", "heading_to_pickup", "at_pickup"];
+
+// A rider can hand a job back until they have the parcel.
+export const RELEASABLE_BY_RIDER: DeliveryStatus[] = ["heading_to_pickup", "at_pickup"];
+
+// Failures that happen at the customer's door leave the rider holding the
+// parcel, so they must bring it back; a seller problem at pickup doesn't.
+export function mustReturnParcel(reason: FailureReason): boolean {
+  return reason !== "seller_unavailable";
+}
 
 export type FailureReason =
   | "seller_unavailable"
@@ -64,6 +80,9 @@ export const deliveryStatusLabels: Record<DeliveryStatus, string> = {
   at_dropoff: "Rider has arrived",
   delivered: "Delivered",
   failed: "Delivery failed",
+  returning: "Rider is returning your order to the seller",
+  returned: "Order returned to the seller",
+  cancelled: "Delivery cancelled",
 };
 
 // How long a rider has to accept an offer once it's shown to them.
@@ -110,6 +129,7 @@ export type Delivery = {
   declinedBy: string[]; // rider ids who declined or let the offer expire
   offerSeenAt: Record<string, number>; // rider id -> when the offer was first shown
   failureReason?: FailureReason;
+  returnConfirmedAt?: number; // the seller confirmed the returned parcel arrived
   rating?: DeliveryRating;
   createdAt: number;
   history: DeliveryHistoryEntry[];
@@ -147,4 +167,18 @@ export function minutesLeft(d: Delivery, nowMs: number): number | null {
   const target = etaTarget(d);
   if (target === null || nowMs <= 0) return null;
   return Math.max(0, Math.ceil((target - nowMs) / 60_000));
+}
+
+// A delivery the seller has to do something about: a failed or returned one
+// sends the order back to them (confirm the parcel, or request a rider again).
+export function deliveryNeedsSeller(d: Delivery | undefined): boolean {
+  return d !== undefined && (d.status === "failed" || d.status === "returned");
+}
+
+// Can the seller send a rider again? Not while a returned parcel is still
+// unconfirmed — it has to be physically back first.
+export function canRequestAgain(d: Delivery | undefined): boolean {
+  if (!d) return true;
+  if (d.status === "returned") return d.returnConfirmedAt !== undefined;
+  return d.status === "failed" || d.status === "cancelled";
 }

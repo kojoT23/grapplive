@@ -13,6 +13,7 @@ import { useDeliveryStore, activeDeliveryFor } from "@/lib/store/useDeliveryStor
 import {
   NEXT_STEP,
   OTP_MAX_ATTEMPTS,
+  RELEASABLE_BY_RIDER,
   failureReasonLabels,
   failureReasonsFor,
   type Delivery,
@@ -26,6 +27,7 @@ const stepTitle: Partial<Record<DeliveryStatus, string>> = {
   at_pickup: "Collect the order",
   out_for_delivery: "Deliver to the customer",
   at_dropoff: "Confirm delivery",
+  returning: "Return the parcel to the seller",
 };
 
 function mapsLink(query: string) {
@@ -45,12 +47,15 @@ export default function RiderActivePage() {
   const advance = useDeliveryStore((s) => s.advance);
   const completeDelivery = useDeliveryStore((s) => s.completeDelivery);
   const reportFailure = useDeliveryStore((s) => s.reportFailure);
+  const confirmReturn = useDeliveryStore((s) => s.confirmReturn);
+  const releaseJob = useDeliveryStore((s) => s.releaseJob);
 
   const [otp, setOtp] = useState("");
   const [otpError, setOtpError] = useState("");
   const [showFailure, setShowFailure] = useState(false);
   const [finishedId, setFinishedId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [confirmingRelease, setConfirmingRelease] = useState(false);
 
   if (isChecking || !riderHydrated || !deliveriesHydrated) {
     return (
@@ -133,6 +138,18 @@ export default function RiderActivePage() {
     }
   };
 
+  const handleReturned = () => {
+    if (confirmReturn(active.id, rider.id) === "ok") router.push("/rider");
+  };
+
+  const handleRelease = () => {
+    if (!confirmingRelease) {
+      setConfirmingRelease(true);
+      return;
+    }
+    if (releaseJob(active.id, rider.id) === "ok") router.push("/rider");
+  };
+
   const handleFailure = (reason: FailureReason) => {
     if (reportFailure(active.id, rider.id, reason) === "ok") router.push("/rider");
   };
@@ -158,6 +175,8 @@ export default function RiderActivePage() {
         </a>
       </div>
 
+      {active.status !== "returning" && (
+        <>
       <div className="mx-3 md:mx-5 mb-2 border border-gl-border rounded-lg p-3">
         <div className="text-[9px] text-gl-text-secondary mb-0.5">Drop-off · {active.dropoffKm} km</div>
         {active.customerName && (
@@ -238,7 +257,24 @@ export default function RiderActivePage() {
         </div>
       )}
 
-      {active.status === "at_dropoff" ? (
+        </>
+      )}
+
+      {active.status === "returning" ? (
+        <div className="mx-3 md:mx-5">
+          <p className="text-[10px] text-gl-text-secondary mb-2">
+            The delivery didn&apos;t go through
+            {active.failureReason ? ` (${failureReasonLabels[active.failureReason]})` : ""}. Take the parcel back to{" "}
+            {active.sellerName}, then tell us once you&apos;ve handed it over.
+          </p>
+          <button
+            onClick={handleReturned}
+            className="w-full bg-gl-brand text-white rounded-lg py-2.5 text-[13px] font-semibold active:opacity-90"
+          >
+            I&apos;ve returned the parcel
+          </button>
+        </div>
+      ) : active.status === "at_dropoff" ? (
         <div className="mx-3 md:mx-5">
           <label className="text-[10px] text-gl-text-secondary mb-1.5 block">
             Ask the customer for their 4-digit delivery code
@@ -307,6 +343,17 @@ export default function RiderActivePage() {
               Can&apos;t complete this delivery
             </button>
           )}
+        </div>
+      )}
+
+      {RELEASABLE_BY_RIDER.includes(active.status) && (
+        <div className="mx-3 md:mx-5 mt-1">
+          <button
+            onClick={handleRelease}
+            className="w-full text-gl-text-secondary text-[11px] font-semibold py-2 active:opacity-60"
+          >
+            {confirmingRelease ? "Tap again to hand this job back" : "Hand this job back"}
+          </button>
         </div>
       )}
     </>

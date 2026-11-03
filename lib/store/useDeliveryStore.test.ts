@@ -250,22 +250,41 @@ describe("delivery dispatch", () => {
       expect(failureReasonsFor("at_dropoff")).not.toContain("seller_unavailable");
     });
 
-    it("ends the attempt, sends the order back to waiting, and frees the rider", () => {
-      const { id, rider } = atDropoff();
+    it("a seller problem at pickup ends the attempt, sends the order back and frees the rider", () => {
+      requestDeliveryForGroup(GROUP);
+      const rider = makeRider("+233501111111", "Kwesi");
+      const id = store().deliveries[0].id;
+      store().acceptOffer(id, rider);
+      store().advance(id, rider); // at pickup
 
-      expect(store().reportFailure(id, rider, "seller_unavailable")).toBe("invalid");
-      expect(store().reportFailure(id, rider, "customer_unavailable")).toBe("ok");
+      expect(store().reportFailure(id, rider, "customer_unavailable")).toBe("invalid"); // wrong place
+      expect(store().reportFailure(id, rider, "seller_unavailable")).toBe("ok");
 
       expect(store().deliveries[0].status).toBe("failed");
-      expect(store().deliveries[0].failureReason).toBe("customer_unavailable");
       expect(orderStatus()).toBe("ready_for_pickup");
       expect(group().riderName).toBeUndefined();
       expect(activeDeliveryFor(store().deliveries, rider)).toBeUndefined();
     });
 
-    it("lets the seller request again, creating a fresh offer and keeping the failed one as history", () => {
+    it("a customer problem leaves the rider holding the parcel, still on the job", () => {
       const { id, rider } = atDropoff();
-      store().reportFailure(id, rider, "wrong_address");
+
+      expect(store().reportFailure(id, rider, "seller_unavailable")).toBe("invalid");
+      expect(store().reportFailure(id, rider, "customer_unavailable")).toBe("ok");
+
+      expect(store().deliveries[0].status).toBe("returning");
+      expect(store().deliveries[0].failureReason).toBe("customer_unavailable");
+      expect(orderStatus()).toBe("out_for_delivery"); // the parcel isn't back yet
+      expect(activeDeliveryFor(store().deliveries, rider)?.id).toBe(id); // can't take another job
+    });
+
+    it("lets the seller request again after a failed pickup, keeping the failed one as history", () => {
+      requestDeliveryForGroup(GROUP);
+      const rider = makeRider("+233501111111", "Kwesi");
+      const id = store().deliveries[0].id;
+      store().acceptOffer(id, rider);
+      store().advance(id, rider);
+      store().reportFailure(id, rider, "seller_unavailable");
 
       requestDeliveryForGroup(GROUP);
       expect(store().deliveries).toHaveLength(2);

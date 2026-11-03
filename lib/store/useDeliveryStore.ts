@@ -3,6 +3,9 @@ import { persist } from "zustand/middleware";
 import { safeJSONStorage } from "@/lib/utils/safe-storage";
 import {
   ACTIVE_DELIVERY_STATUSES,
+  CANCELLABLE_BY_SELLER,
+  RELEASABLE_BY_RIDER,
+  mustReturnParcel,
   NEXT_STEP,
   OTP_MAX_ATTEMPTS,
   estimateTrip,
@@ -46,6 +49,7 @@ export type AcceptResult = "ok" | "gone" | "busy" | "offline" | "unknown_rider" 
 export type StepResult = "ok" | "invalid";
 export type CompleteResult = "ok" | "wrong_otp" | "locked" | "invalid";
 export type RateResult = "ok" | "invalid" | "already_rated" | "not_buyer";
+export type ReleaseResult = "ok" | "invalid";
 
 type DeliveryState = {
   deliveries: Delivery[];
@@ -54,6 +58,11 @@ type DeliveryState = {
   createDelivery: (input: NewDeliveryInput) => Delivery;
   markOfferSeen: (deliveryId: string, riderId: string, at: number) => void;
   declineOffer: (deliveryId: string, riderId: string) => void;
+  // A rider brings back an offer they skipped (declined or let expire).
+  restoreOffer: (deliveryId: string, riderId: string) => void;
+  // The seller sends a still-open request out again from scratch: everyone
+  // who skipped it sees it again, with a fresh 30 seconds.
+  reofferDelivery: (deliveryId: string) => void;
   acceptOffer: (deliveryId: string, riderId: string) => AcceptResult;
   advance: (deliveryId: string, riderId: string) => StepResult;
   completeDelivery: (deliveryId: string, riderId: string, otp: string) => CompleteResult;
@@ -61,6 +70,15 @@ type DeliveryState = {
   // The buyer rates the rider, once, after a completed delivery. Only the
   // phone that placed the order may rate it.
   rateDelivery: (deliveryId: string, buyerPhone: string, stars: number, comment?: string) => RateResult;
+  // After a customer-side failure the rider takes the parcel back and says so;
+  // the seller then confirms it really arrived.
+  confirmReturn: (deliveryId: string, riderId: string) => StepResult;
+  confirmParcelReceived: (deliveryId: string, sellerId: string) => StepResult;
+  // The seller calls off a delivery before the parcel is picked up.
+  cancelDelivery: (deliveryId: string, sellerId: string) => StepResult;
+  // The rider hands a job back before they have the parcel; it goes out to
+  // other riders again.
+  releaseJob: (deliveryId: string, riderId: string) => ReleaseResult;
 };
 
 // ---- Selectors (pure, so pages and tests can use them on any list) ----
@@ -92,7 +110,14 @@ export function openOffersFor(deliveries: Delivery[], riderId: string, riderArea
 
 export function historyFor(deliveries: Delivery[], riderId: string): Delivery[] {
   return deliveries
-    .filter((d) => d.riderId === riderId && (d.status === "delivered" || d.status === "failed"))
+    .filter(
+      (d) =>
+        d.riderId === riderId &&
+        (d.status === "delivered" ||
+          d.status === "failed" ||
+          d.status === "returned" ||
+          d.status === "cancelled")
+    )
     .sort((a, b) => b.createdAt - a.createdAt);
 }
 
@@ -176,6 +201,23 @@ export const useDeliveryStore = create<DeliveryState>()(
             d.status !== "offered" || d.declinedBy.includes(riderId)
               ? d
               : { ...d, declinedBy: [...d.declinedBy, riderId] }
+          ),
+        })),
+
+      restoreOffer: (deliveryId, riderId) =>
+        set((state) => ({
+          deliveries: patchDelivery(state.deliveries, deliveryId, (d) => {
+            if (d.status !== "offered") return d;
+            const { [riderId]: removed, ...seen } = d.offerSeenAt;
+            void removed;
+            return { ...d, declinedBy: d.declinedBy.filter((id) => id !== riderId), offerSeenAt: seen };
+          }),
+        })),
+
+      reofferDelivery: (deliveryId) =>
+        set((state) => ({
+          deliveries: patchDelivery(state.deliveries, deliveryId, (d) =>
+            d.status === "offered" ? { ...d, declinedBy: [], offerSeenAt: {} } : d
           ),
         })),
 
@@ -298,17 +340,131 @@ export const useDeliveryStore = create<DeliveryState>()(
         if (!delivery || delivery.riderId !== riderId) return "invalid";
         if (!failureReasonsFor(delivery.status).includes(reason)) return "invalid";
 
+        if (mustReturnParcel(reason)) {
+          // The rider has the parcel, so the attempt isn't over until it's
+          // back with the seller. The order stays "out for delivery".
+          set((state) => ({
+            deliveries: patchDelivery(state.deliveries, deliveryId, (d) => ({
+              ...withStatus(d, "returning"),
+              failureReason: reason,
+            })),
+          }));
+          useOrdersStore.getState().applyDeliveryUpdate(delivery.orderGroupId, {
+            status: "out_for_delivery",
+            label: `Delivery attempt failed — ${failureReasonLabels[reason]}. Returning the order to the seller`,
+          });
+          return "ok";
+        }
+
+        // Never picked up (seller problem): nothing to bring back, so the
+        // order goes straight back to the seller to sort out.
         set((state) => ({
           deliveries: patchDelivery(state.deliveries, deliveryId, (d) => ({
             ...withStatus(d, "failed"),
             failureReason: reason,
           })),
         }));
-        // The order goes back to waiting for a delivery so the seller can
-        // sort it out (and request another rider if it makes sense).
         useOrdersStore.getState().applyDeliveryUpdate(delivery.orderGroupId, {
           status: "ready_for_pickup",
           label: `Delivery attempt failed — ${failureReasonLabels[reason]}`,
+          riderName: null,
+          etaMinutes: null,
+        });
+        return "ok";
+      },
+
+      confirmReturn: (deliveryId, riderId) => {
+        const delivery = get().deliveries.find((d) => d.id === deliveryId);
+        if (!delivery || delivery.riderId !== riderId || delivery.status !== "returning") {
+          return "invalid";
+        }
+        set((state) => ({
+          deliveries: patchDelivery(state.deliveries, deliveryId, (d) => withStatus(d, "returned")),
+        }));
+        useOrdersStore.getState().applyDeliveryUpdate(delivery.orderGroupId, {
+          status: "ready_for_pickup",
+          label: "Parcel returned to the seller",
+          riderName: null,
+          etaMinutes: null,
+        });
+        return "ok";
+      },
+
+      confirmParcelReceived: (deliveryId, sellerId) => {
+        const delivery = get().deliveries.find((d) => d.id === deliveryId);
+        if (
+          !delivery ||
+          delivery.sellerId !== sellerId ||
+          delivery.status !== "returned" ||
+          delivery.returnConfirmedAt !== undefined
+        ) {
+          return "invalid";
+        }
+        set((state) => ({
+          deliveries: patchDelivery(state.deliveries, deliveryId, (d) => ({
+            ...d,
+            returnConfirmedAt: Date.now(),
+          })),
+        }));
+        useOrdersStore.getState().applyDeliveryUpdate(delivery.orderGroupId, {
+          status: "ready_for_pickup",
+          label: "Seller confirmed the parcel is back",
+        });
+        return "ok";
+      },
+
+      cancelDelivery: (deliveryId, sellerId) => {
+        const delivery = get().deliveries.find((d) => d.id === deliveryId);
+        if (
+          !delivery ||
+          delivery.sellerId !== sellerId ||
+          !CANCELLABLE_BY_SELLER.includes(delivery.status)
+        ) {
+          return "invalid";
+        }
+        set((state) => ({
+          deliveries: patchDelivery(state.deliveries, deliveryId, (d) => withStatus(d, "cancelled")),
+        }));
+        // Back to where the order was before a rider was requested, so the
+        // seller can request again whenever they like.
+        const group = useOrdersStore
+          .getState()
+          .orders.flatMap((o) => o.groups)
+          .find((g) => g.id === delivery.orderGroupId);
+        const before = [...(group?.history ?? [])]
+          .reverse()
+          .find((h) => h.status === "ready_to_pack" || h.status === "preparing");
+        useOrdersStore.getState().applyDeliveryUpdate(delivery.orderGroupId, {
+          status: before?.status ?? "preparing",
+          label: "Delivery request cancelled by the seller",
+          riderName: null,
+          etaMinutes: null,
+        });
+        return "ok";
+      },
+
+      releaseJob: (deliveryId, riderId) => {
+        const delivery = get().deliveries.find((d) => d.id === deliveryId);
+        if (
+          !delivery ||
+          delivery.riderId !== riderId ||
+          !RELEASABLE_BY_RIDER.includes(delivery.status)
+        ) {
+          return "invalid";
+        }
+        // Back out to other riders — but not to this one again.
+        set((state) => ({
+          deliveries: patchDelivery(state.deliveries, deliveryId, (d) => ({
+            ...withStatus(d, "offered"),
+            riderId: null,
+            riderName: null,
+            declinedBy: d.declinedBy.includes(riderId) ? d.declinedBy : [...d.declinedBy, riderId],
+            offerSeenAt: {},
+          })),
+        }));
+        useOrdersStore.getState().applyDeliveryUpdate(delivery.orderGroupId, {
+          status: "ready_for_pickup",
+          label: "Your rider cancelled — finding another rider",
           riderName: null,
           etaMinutes: null,
         });

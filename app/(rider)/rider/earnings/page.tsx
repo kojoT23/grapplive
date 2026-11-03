@@ -135,6 +135,19 @@ export default function RiderEarningsPage() {
               {e.status === "handover_pending" && (
                 <div className="text-[10px] font-semibold text-gl-amber">Waiting for {e.sellerName} to confirm</div>
               )}
+              {e.status === "disputed" && (
+                <div>
+                  <div className="text-[10px] font-semibold text-gl-red mb-1.5">
+                    {e.sellerName} says they haven&apos;t received this cash
+                  </div>
+                  <button
+                    onClick={() => handOver(e.id, rider.id)}
+                    className="w-full border border-gl-brand text-gl-brand rounded-lg py-2 text-[11px] font-semibold active:bg-gl-brand-soft-bg transition-colors"
+                  >
+                    I&apos;ve handed it over again
+                  </button>
+                </div>
+              )}
               {e.status === "settled" && (
                 <div className="text-[10px] font-semibold text-gl-green">Settled ✓</div>
               )}

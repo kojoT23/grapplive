@@ -34,7 +34,8 @@ export type OrderStatus =
   | "ready_for_pickup" // delivery requested, waiting for a rider to accept
   | "rider_assigned" // a rider accepted; heading to / at the seller
   | "out_for_delivery" // rider has the parcel and is on the way
-  | "delivered";
+  | "delivered"
+  | "cancelled"; // called off before it was dispatched (see cancelByBuyer)
 
 export type OrderHistoryEntry = {
   status: OrderStatus;

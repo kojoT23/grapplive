@@ -1,5 +1,5 @@
 import { getStoreBySellerId } from "@/lib/mock-data/stores";
-import { ACTIVE_DELIVERY_STATUSES } from "@/lib/mock-data/deliveries";
+import { ACTIVE_DELIVERY_STATUSES, canRequestAgain } from "@/lib/mock-data/deliveries";
 import { groupTotal } from "@/lib/mock-data/orders";
 import { useOrdersStore } from "@/lib/store/useOrdersStore";
 import { latestDeliveryForGroup, useDeliveryStore } from "@/lib/store/useDeliveryStore";
@@ -24,6 +24,8 @@ export function requestDeliveryForGroup(groupId: string): void {
   if (latest && (latest.status === "offered" || ACTIVE_DELIVERY_STATUSES.includes(latest.status))) {
     return;
   }
+  // A returned parcel has to be confirmed back with the seller first.
+  if (!canRequestAgain(latest)) return;
 
   const pickupArea = getStoreBySellerId(group.sellerId)?.deliveryAreas[0] ?? "Accra";
   orders.requestDelivery(groupId);

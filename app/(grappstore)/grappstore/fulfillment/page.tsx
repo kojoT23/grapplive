@@ -6,7 +6,8 @@ import { IconArrowLeft, IconPlus } from "@tabler/icons-react";
 import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
 import { useOrdersStore } from "@/lib/store/useOrdersStore";
 import { useDeliveryStore, latestDeliveryForGroup } from "@/lib/store/useDeliveryStore";
-import { DeliveryOrderCard, isRiderManaged } from "@/components/orders/DeliveryOrderCard";
+import { DeliveryOrderCard, CancelledOrderCard, isRiderManaged } from "@/components/orders/DeliveryOrderCard";
+import { deliveryNeedsSeller } from "@/lib/mock-data/deliveries";
 import { requestDeliveryForGroup } from "@/lib/delivery/dispatch";
 import { CashToConfirm } from "@/components/orders/CashToConfirm";
 import { flattenGroups, groupTotal, type FlatOrderGroup, type OrderStatus } from "@/lib/mock-data/orders";
@@ -45,12 +46,17 @@ function FulfillmentCard({
   const total = groupTotal(group);
   const delivery = useDeliveryStore((s) => latestDeliveryForGroup(s.deliveries, group.id));
 
+  if (group.status === "cancelled") {
+    return <CancelledOrderCard group={group} flashClass={flashClass} />;
+  }
+
   if (isRiderManaged(group, delivery)) {
     return (
       <DeliveryOrderCard
         group={group}
         delivery={delivery}
         flashClass={flashClass}
+        actingSellerId="grapplive-official"
         onRequestDelivery={onRequestDelivery}
       />
     );
@@ -156,7 +162,7 @@ export default function GrappStoreFulfillmentPage() {
   // rider, or sort out the problem), so it counts as needing action.
   const needsAction = (g: FlatOrderGroup) =>
     NEEDS_ACTION_STATUSES.includes(g.status) ||
-    (g.status === "ready_for_pickup" && latestDeliveryForGroup(deliveries, g.id)?.status === "failed");
+    (g.status === "ready_for_pickup" && deliveryNeedsSeller(latestDeliveryForGroup(deliveries, g.id)));
   const needsActionCount = groups.filter(needsAction).length;
 
   const filteredGroups = groups.filter((g) => {

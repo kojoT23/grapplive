@@ -6,7 +6,9 @@
 //   handover_pending rider says they handed it to the seller; waiting for the
 //                    seller to confirm they received it
 //   settled          seller confirmed — the cash trail is closed
-export type CashEntryStatus = "held" | "handover_pending" | "settled";
+//   disputed         the seller says they did NOT receive it; the rider is
+//                    still responsible for the cash and can hand it over again
+export type CashEntryStatus = "held" | "handover_pending" | "settled" | "disputed";
 
 export type CashEntry = {
   id: string;
@@ -21,6 +23,7 @@ export type CashEntry = {
   collectedAt: number;
   handedOverAt?: number;
   settledAt?: number;
+  disputedAt?: number;
 };
 
 // A rider holding this much (or more) unhanded cash can't accept new jobs

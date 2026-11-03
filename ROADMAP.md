@@ -574,6 +574,34 @@ and the OTP. AGENTS.md §4.4, §6 (Rider), §10 and §17 hold the spec.
    sharing need the backend; no dispute/report flow for a bad delivery; no
    seller-side view of ratings.
 
+**Cancelling, returns and disputes (the last delivery gaps).**
+- *Seller cancels a delivery* (`cancelDelivery`) while it's waiting for a
+  rider or until the parcel is picked up; the order goes back to where it
+  was and the seller can request again. *Rider hands a job back*
+  (`releaseJob`) until they have the parcel: it goes out to other riders, not
+  back to them. *Buyer cancels an order* (`cancelByBuyer`) — only cash on
+  delivery orders that haven't been dispatched (nothing was paid, so
+  nothing to refund); paid orders have to go through the seller until real
+  refunds exist. New order status `cancelled`.
+- *Parcel return.* A failure at the customer's door (unavailable / wrong
+  address / refused) no longer ends the delivery: the rider is still holding
+  the parcel (`returning`), takes it back, says so (`returned`), and the
+  seller confirms it's physically back (`confirmParcelReceived`). A new
+  request is blocked until then. A seller problem at pickup still ends it
+  straight away (`failed`). The order stays "out for delivery" while the
+  parcel is on its way back.
+- *Cash disputes.* A seller can answer a handover with **I did not receive
+  it** (`disputeReceived`): the entry becomes `disputed`, the rider is still
+  responsible for that cash (it counts toward the GHS 500 limit) and can hand
+  it over again. There is no staff resolution yet — that belongs with the
+  GrappStore staff role.
+- Also here: the *Show it again* / *Send the request again* recovery for
+  skipped offers (see "Skipped offers" above).
+- *Not modeled:* a fee for a failed or returned attempt (riders currently
+  earn only on completed deliveries — depends on the delivery-fee decision),
+  rider reliability penalties for handing jobs back, a seller cancelling a
+  whole order, refunds for paid orders.
+
 **The delivery side is feature-complete for the prototype.** What remains
 is backend work (real accounts, shared dispatch across devices, live
 tracking, real payouts/SMS), and the GrappStore staff role.
@@ -608,6 +636,9 @@ lower return at this stage:
 - `lib/store/useStoreProfileStore.test.ts` (added later, 8 tests) — the
   per-seller storefront profile: seeding, isolation between sellers, and
   the migration from the old single-seller shape.
+- `lib/store/useDeliveryLifecycle.test.ts` (21 tests) — cancelling (seller,
+  rider, buyer), the parcel-return trail, cash disputes and the cash limit,
+  and skipped/re-sent offers.
 - `lib/store/useDeliveryRating.test.ts` (8 tests) — rating a delivery
   (once, only the buyer, 1–5 whole stars, running average) and the
   counting-down ETA.

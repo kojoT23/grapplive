@@ -26,14 +26,17 @@ type CashLedgerState = {
   recordCollection: (input: NewCashEntryInput) => CashEntry | null;
   handOver: (entryId: string, riderId: string) => "ok" | "invalid";
   confirmReceived: (entryId: string, sellerId: string) => "ok" | "invalid";
+  // The seller says the handed-over cash never arrived.
+  disputeReceived: (entryId: string, sellerId: string) => "ok" | "invalid";
 };
 
 // ---- Selectors ----
 
-// Cash a rider has collected and not yet handed over.
+// Cash the rider is still responsible for: collected and not yet handed
+// over, or handed over but disputed by the seller.
 export function heldTotal(entries: CashEntry[], riderId: string): number {
   return entries
-    .filter((e) => e.riderId === riderId && e.status === "held")
+    .filter((e) => e.riderId === riderId && (e.status === "held" || e.status === "disputed"))
     .reduce((sum, e) => sum + e.amountGHS, 0);
 }
 
@@ -80,7 +83,13 @@ export const useCashLedgerStore = create<CashLedgerState>()(
 
       handOver: (entryId, riderId) => {
         const entry = get().entries.find((e) => e.id === entryId);
-        if (!entry || entry.riderId !== riderId || entry.status !== "held") return "invalid";
+        if (
+          !entry ||
+          entry.riderId !== riderId ||
+          (entry.status !== "held" && entry.status !== "disputed")
+        ) {
+          return "invalid";
+        }
         set((state) => ({
           entries: state.entries.map((e) =>
             e.id === entryId ? { ...e, status: "handover_pending", handedOverAt: Date.now() } : e
@@ -97,6 +106,19 @@ export const useCashLedgerStore = create<CashLedgerState>()(
         set((state) => ({
           entries: state.entries.map((e) =>
             e.id === entryId ? { ...e, status: "settled", settledAt: Date.now() } : e
+          ),
+        }));
+        return "ok";
+      },
+
+      disputeReceived: (entryId, sellerId) => {
+        const entry = get().entries.find((e) => e.id === entryId);
+        if (!entry || entry.sellerId !== sellerId || entry.status !== "handover_pending") {
+          return "invalid";
+        }
+        set((state) => ({
+          entries: state.entries.map((e) =>
+            e.id === entryId ? { ...e, status: "disputed", disputedAt: Date.now() } : e
           ),
         }));
         return "ok";

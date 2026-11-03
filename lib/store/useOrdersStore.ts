@@ -22,6 +22,8 @@ export type DeliveryUpdate = {
   etaMinutes?: number | null;
 };
 
+export type CancelResult = "ok" | "invalid" | "not_buyer" | "not_cancellable";
+
 export type NewOrderGroupInput = {
   sellerId: string;
   sellerName: string;
@@ -40,6 +42,10 @@ type OrdersState = {
   // (lib/delivery/dispatch.ts), which is what callers should use.
   requestDelivery: (groupId: string) => void;
   applyDeliveryUpdate: (groupId: string, update: DeliveryUpdate) => void;
+  // The buyer calls off an order that hasn't been dispatched yet. Only cash on
+  // delivery orders (nothing paid yet) can be cancelled this way — a paid order
+  // needs a refund, which has to go through the seller until real payments exist.
+  cancelByBuyer: (groupId: string, buyerPhone: string) => CancelResult;
   markDelivered: (groupId: string) => void;
 };
 
@@ -91,7 +97,7 @@ function updateGroup(
 
 export const useOrdersStore = create<OrdersState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       orders: initialOrders,
 
       // Mirrors the hasHydrated pattern already used by useWishlistStore,
@@ -148,6 +154,26 @@ export const useOrdersStore = create<OrdersState>()(
             history: [...g.history, { status: "ready_for_pickup", label: "Delivery requested — waiting for a rider", timestamp: nowLabel() }],
           })),
         })),
+
+      cancelByBuyer: (groupId, buyerPhone) => {
+        const order = get().orders.find((o) => o.groups.some((g) => g.id === groupId));
+        const group = order?.groups.find((g) => g.id === groupId);
+        if (!order || !group) return "invalid";
+        if (order.buyerPhone && order.buyerPhone !== buyerPhone) return "not_buyer";
+        const cancellable =
+          group.paymentMethod === "cash_on_delivery" &&
+          (group.status === "ready_to_pack" || group.status === "preparing");
+        if (!cancellable) return "not_cancellable";
+
+        set((state) => ({
+          orders: updateGroup(state.orders, groupId, (g) => ({
+            ...g,
+            status: "cancelled",
+            history: [...g.history, { status: "cancelled", label: "Cancelled by the buyer", timestamp: nowLabel() }],
+          })),
+        }));
+        return "ok";
+      },
 
       applyDeliveryUpdate: (groupId, update) =>
         set((state) => ({

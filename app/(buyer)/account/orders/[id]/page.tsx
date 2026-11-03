@@ -97,6 +97,38 @@ function RateRider({ delivery }: { delivery: Delivery }) {
   );
 }
 
+// A buyer can call off a cash-on-delivery order until a rider has been
+// requested (nothing has been paid, so nothing needs refunding). Two taps, so
+// it can't happen by accident.
+function CancelOrder({ groupId }: { groupId: string }) {
+  const phone = useAppStore((s) => s.phone);
+  const cancelByBuyer = useOrdersStore((s) => s.cancelByBuyer);
+  const [confirming, setConfirming] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleClick = () => {
+    if (!confirming) {
+      setConfirming(true);
+      return;
+    }
+    const result = cancelByBuyer(groupId, phone);
+    if (result === "not_buyer") setError("Only the person who placed this order can cancel it.");
+    else if (result !== "ok") setError("This order can't be cancelled any more.");
+  };
+
+  return (
+    <div className="mb-4">
+      <button
+        onClick={handleClick}
+        className="w-full border border-gl-border-strong text-gl-red text-[12px] font-semibold py-2.5 rounded-lg active:bg-gl-bg-muted transition-colors"
+      >
+        {confirming ? "Tap again to cancel this order" : "Cancel order"}
+      </button>
+      {error && <p className="text-[10px] text-gl-red mt-1">{error}</p>}
+    </div>
+  );
+}
+
 export default function BuyerOrderDetailPage() {
   const params = useParams<{ id: string }>();
   const orders = useOrdersStore((s) => s.orders);
@@ -136,7 +168,12 @@ export default function BuyerOrderDetailPage() {
   const riderForDelivery =
     delivery?.riderId ? getRiderByIdSync(delivery.riderId) : undefined;
   const deliveryInProgress =
-    delivery !== undefined && ACTIVE_DELIVERY_STATUSES.includes(delivery.status);
+    delivery !== undefined &&
+    ACTIVE_DELIVERY_STATUSES.includes(delivery.status) &&
+    delivery.status !== "returning";
+  const canCancel =
+    group.paymentMethod === "cash_on_delivery" &&
+    (group.status === "ready_to_pack" || group.status === "preparing");
 
   const timeline = relevantSteps.map((step) => {
     const historyEntry = group.history.find((h) => h.status === step.status);
@@ -240,13 +277,34 @@ export default function BuyerOrderDetailPage() {
 
         {delivery?.status === "delivered" && delivery.riderName && <RateRider delivery={delivery} />}
 
-        {group.status === "ready_for_pickup" && delivery?.status === "failed" && delivery.failureReason && (
+        {delivery?.status === "returning" && delivery.failureReason && (
           <div className="border border-gl-border rounded-lg p-3 mb-4">
             <div className="text-[10px] font-semibold text-gl-amber mb-0.5">DELIVERY ATTEMPT FAILED</div>
             <div className="text-[11px] text-gl-text">{failureReasonLabels[delivery.failureReason]}</div>
-            <div className="text-[10px] text-gl-text-secondary">The seller has been told and will arrange next steps.</div>
+            <div className="text-[10px] text-gl-text-secondary">
+              Your rider is taking the order back to the seller, who will arrange next steps with you.
+            </div>
           </div>
         )}
+
+        {group.status === "ready_for_pickup" &&
+          (delivery?.status === "failed" || delivery?.status === "returned") &&
+          delivery.failureReason && (
+            <div className="border border-gl-border rounded-lg p-3 mb-4">
+              <div className="text-[10px] font-semibold text-gl-amber mb-0.5">DELIVERY ATTEMPT FAILED</div>
+              <div className="text-[11px] text-gl-text">{failureReasonLabels[delivery.failureReason]}</div>
+              <div className="text-[10px] text-gl-text-secondary">The seller has been told and will arrange next steps.</div>
+            </div>
+          )}
+
+        {group.status === "cancelled" && (
+          <div className="border border-gl-border rounded-lg p-3 mb-4">
+            <div className="text-[10px] font-semibold text-gl-text-secondary mb-0.5">ORDER CANCELLED</div>
+            <div className="text-[10px] text-gl-text-secondary">You cancelled this order. Nothing was charged.</div>
+          </div>
+        )}
+
+        {canCancel && <CancelOrder groupId={group.id} />}
 
         <h2 className="text-[11px] font-semibold text-gl-text mb-2.5">Tracking</h2>
         <div>

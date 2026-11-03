@@ -8,6 +8,7 @@ import { useCashLedgerStore, pendingForSeller } from "@/lib/store/useCashLedgerS
 export function CashToConfirm({ sellerId }: { sellerId: string }) {
   const entries = useCashLedgerStore((s) => s.entries);
   const confirmReceived = useCashLedgerStore((s) => s.confirmReceived);
+  const disputeReceived = useCashLedgerStore((s) => s.disputeReceived);
   const pending = pendingForSeller(entries, sellerId);
 
   if (pending.length === 0) return null;
@@ -26,6 +27,12 @@ export function CashToConfirm({ sellerId }: { sellerId: string }) {
             className="w-full bg-gl-brand text-white rounded-lg py-2 text-[11px] font-semibold active:opacity-90"
           >
             I received the cash
+          </button>
+          <button
+            onClick={() => disputeReceived(e.id, sellerId)}
+            className="w-full text-gl-red text-[11px] font-semibold pt-2 active:opacity-60"
+          >
+            I did not receive it
           </button>
         </div>
       ))}

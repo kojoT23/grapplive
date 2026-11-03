@@ -39,11 +39,13 @@ export default function RiderHistoryPage() {
       {history.length === 0 ? (
         <div className="mx-3 md:mx-5 border border-dashed border-gl-border-strong rounded-lg px-4 py-8 text-center">
           <div className="text-[12px] font-semibold text-gl-text mb-1">No deliveries yet</div>
-          <div className="text-[10px] text-gl-text-secondary">Finished and failed deliveries show up here.</div>
+          <div className="text-[10px] text-gl-text-secondary">Finished, failed and cancelled deliveries show up here.</div>
         </div>
       ) : (
         history.map((d) => {
           const delivered = d.status === "delivered";
+          const outcome =
+            d.status === "returned" ? "Returned" : d.status === "cancelled" ? "Cancelled" : "Failed";
           const doneAt = d.history[d.history.length - 1]?.at ?? d.createdAt;
           return (
             <div key={d.id} className="mx-3 md:mx-5 mb-2 border border-gl-border rounded-lg p-3">
@@ -52,12 +54,13 @@ export default function RiderHistoryPage() {
                   {d.sellerName} → {d.dropoffArea}
                 </span>
                 <span className={`text-[11px] font-semibold ${delivered ? "text-gl-green" : "text-gl-amber"}`}>
-                  {delivered ? `+GHS ${d.feeGHS}` : "Failed"}
+                  {delivered ? `+GHS ${d.feeGHS}` : outcome}
                 </span>
               </div>
               <div className="text-[10px] text-gl-text-secondary">
                 {formatWhen(doneAt)}
                 {!delivered && d.failureReason ? ` · ${failureReasonLabels[d.failureReason]}` : ""}
+                {d.status === "cancelled" ? " · Cancelled by the seller" : ""}
                 {d.codAmountGHS > 0 && delivered ? ` · Collected GHS ${d.codAmountGHS} cash` : ""}
                 {d.rating ? ` · Rated ${"★".repeat(d.rating.stars)}${"☆".repeat(5 - d.rating.stars)}` : ""}
               </div>
