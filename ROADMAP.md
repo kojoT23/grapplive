@@ -597,10 +597,9 @@ and the OTP. AGENTS.md §4.4, §6 (Rider), §10 and §17 hold the spec.
   GrappStore staff role.
 - Also here: the *Show it again* / *Send the request again* recovery for
   skipped offers (see "Skipped offers" above).
-- *Not modeled:* a fee for a failed or returned attempt (riders currently
-  earn only on completed deliveries — depends on the delivery-fee decision),
-  rider reliability penalties for handing jobs back, a seller cancelling a
-  whole order, refunds for paid orders.
+- *Not modeled:* rider reliability penalties for handing jobs back, a seller
+  cancelling a whole order, refunds for paid orders. (Pay for failed trips is
+  now defined — see "Failed-delivery pay" below.)
 
 **Delivery fees (who pays).** Decided by the payment mode: with the paid
 opt-in, **Instant Confirm** (buyer already agrees to a service charge),
@@ -621,9 +620,21 @@ GrappStore counts as a "no-fee" mode, so its buyers pay delivery. *Not
 modeled:* the fee itself is a MOCK (`estimateDeliveryFeeGHS`; real routing and
 a fee schedule come with the backend); GRAPPlive's cut of the delivery fee;
 settling the delivery fee between a seller and GRAPPlive when the buyer pays
-it inside a Direct MoMo payment; what a rider earns for a failed or returned
-attempt; refunding a delivery fee a buyer already paid on a cancelled or
-failed order.
+it inside a Direct MoMo payment; refunding a delivery fee a buyer already
+paid on a cancelled or failed order.
+
+**Failed-delivery pay.** A single order that fails through no fault of the
+rider pays them **half the delivery fee** (`FAILED_DELIVERY_FEE_SHARE`,
+`earnedFeeGHS` in `lib/delivery/earnings.ts`): for a customer-side failure
+(not there / wrong address / refused) once the parcel is back and the seller
+has confirmed it; for a seller problem at pickup straight away. Nothing is
+paid when the seller cancels or the rider hands the job back. A failed cash
+on delivery order collected no cash, so its half fee is paid through earnings.
+Shown in the rider's History ("half fee paid" / "half fee once the seller
+confirms") and on the return screen. For **collective (batched) orders** the
+rule applies per stop (each failed stop pays half, each delivered stop pays in
+full) — built with scheduled delivery, next. *Not modeled:* who bears the cost
+of a failed trip (the customer or the seller) — needs real payments.
 
 **The delivery side is feature-complete for the prototype.** What remains
 is backend work (real accounts, shared dispatch across devices, live
@@ -659,6 +670,8 @@ lower return at this stage:
 - `lib/store/useStoreProfileStore.test.ts` (added later, 8 tests) — the
   per-seller storefront profile: seeding, isolation between sellers, and
   the migration from the old single-seller shape.
+- `lib/delivery/failedDeliveryPay.test.ts` (7 tests) — half-fee pay for
+  failed deliveries: when it's earned, when it isn't, COD, and timing.
 - `lib/mock-data/deliveryFees.test.ts` (9 tests) — who pays by payment
   mode, fees on order groups, rider pay, the COD cash split and earnings
   not paying a kept fee twice.

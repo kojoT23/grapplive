@@ -8,6 +8,7 @@ import { TabBar } from "@/components/ui/TabBar";
 import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
 import { useCurrentRider } from "@/lib/hooks/useCurrentRider";
 import { riderTabs } from "@/lib/nav/rider-tabs";
+import { halfFeeGHS } from "@/lib/delivery/earnings";
 import { isValidPin, mapsDirectionsLink } from "@/lib/mock-data/deliveryDetails";
 import { useDeliveryStore, activeDeliveryFor } from "@/lib/store/useDeliveryStore";
 import {
@@ -271,7 +272,8 @@ export default function RiderActivePage() {
           <p className="text-[10px] text-gl-text-secondary mb-2">
             The delivery didn&apos;t go through
             {active.failureReason ? ` (${failureReasonLabels[active.failureReason]})` : ""}. Take the parcel back to{" "}
-            {active.sellerName}, then tell us once you&apos;ve handed it over.
+            {active.sellerName}, then tell us once you&apos;ve handed it over. You&apos;ll be paid half the delivery
+            fee (GHS {halfFeeGHS(active.feeGHS)}) once the seller confirms it&apos;s back.
           </p>
           <button
             onClick={handleReturned}

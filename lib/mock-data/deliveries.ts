@@ -85,6 +85,15 @@ export const deliveryStatusLabels: Record<DeliveryStatus, string> = {
   cancelled: "Delivery cancelled",
 };
 
+// What a rider is paid when a delivery fails through no fault of their own:
+// half the delivery fee, because they still made the trip. This applies when
+// the customer causes it (not there, wrong address, refused) AND the parcel is
+// back with the seller and confirmed, or when the seller causes it at pickup
+// (never got the parcel). Nothing is paid when the seller cancels, or the rider
+// hands the job back. (The cost of a failed trip — the customer's or the
+// seller's — isn't charged to anyone yet: that needs real payments.)
+export const FAILED_DELIVERY_FEE_SHARE = 0.5;
+
 // How long a rider has to accept an offer once it's shown to them.
 export const OFFER_SECONDS = 30;
 // Wrong OTP attempts allowed before the code is locked.
