@@ -602,6 +602,29 @@ and the OTP. AGENTS.md §4.4, §6 (Rider), §10 and §17 hold the spec.
   rider reliability penalties for handing jobs back, a seller cancelling a
   whole order, refunds for paid orders.
 
+**Delivery fees (who pays).** Decided by the payment mode: with the paid
+opt-in, **Instant Confirm** (buyer already agrees to a service charge),
+GRAPPlive covers delivery; with every **no-fee** option — Direct MoMo, cash on
+delivery and GrappStore — the **buyer pays** the delivery fee
+(`lib/mock-data/deliveryFees.ts`). Either way the rider is paid the same
+delivery fee for the trip. Fees are per seller (each ships separately),
+shown as a *Delivery* line on both checkouts and on the order page, recorded
+on the order group (`deliveryFeeGHS`, `deliveryFeeChargedGHS`) and used as the
+delivery's rider pay (`groupPayable` = items + the fee the buyer is charged;
+`groupTotal` stays items-only, the seller's revenue). For **cash on delivery**
+the rider collects items + delivery fee, keeps the fee out of that cash
+(`feePaidInCash`, so it is earned but not paid out again) and the cash ledger
+tracks only the items they owe the seller. GrappStore checkout now also has
+the delivery-details form (it had none, so riders got no address); the form
+is a shared hook + component used by both checkouts. *Assumptions to confirm:*
+GrappStore counts as a "no-fee" mode, so its buyers pay delivery. *Not
+modeled:* the fee itself is a MOCK (`estimateDeliveryFeeGHS`; real routing and
+a fee schedule come with the backend); GRAPPlive's cut of the delivery fee;
+settling the delivery fee between a seller and GRAPPlive when the buyer pays
+it inside a Direct MoMo payment; what a rider earns for a failed or returned
+attempt; refunding a delivery fee a buyer already paid on a cancelled or
+failed order.
+
 **The delivery side is feature-complete for the prototype.** What remains
 is backend work (real accounts, shared dispatch across devices, live
 tracking, real payouts/SMS), and the GrappStore staff role.
@@ -636,6 +659,9 @@ lower return at this stage:
 - `lib/store/useStoreProfileStore.test.ts` (added later, 8 tests) — the
   per-seller storefront profile: seeding, isolation between sellers, and
   the migration from the old single-seller shape.
+- `lib/mock-data/deliveryFees.test.ts` (9 tests) — who pays by payment
+  mode, fees on order groups, rider pay, the COD cash split and earnings
+  not paying a kept fee twice.
 - `lib/store/useDeliveryLifecycle.test.ts` (21 tests) — cancelling (seller,
   rider, buyer), the parcel-return trail, cash disputes and the cash limit,
   and skipped/re-sent offers.

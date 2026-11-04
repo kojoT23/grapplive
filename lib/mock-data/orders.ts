@@ -64,6 +64,11 @@ export type OrderGroup = {
   resellerMarkupGHS?: number;
   riderName?: string;
   etaMinutes?: number;
+  // Delivery cost for this seller's part of the order, and how much of it the
+  // buyer pays (see lib/mock-data/deliveryFees.ts). Optional: fixture orders
+  // predate delivery fees.
+  deliveryFeeGHS?: number;
+  deliveryFeeChargedGHS?: number;
   history: OrderHistoryEntry[];
 };
 
@@ -149,4 +154,10 @@ export function flattenGroups(orders: Order[]): FlatOrderGroup[] {
 
 export function groupTotal(group: OrderGroup): number {
   return group.items.reduce((sum, i) => sum + i.priceGHS * i.quantity, 0);
+}
+
+// What the buyer pays for this group: the items plus any delivery fee they
+// are charged. (`groupTotal` stays items-only — that's the seller's revenue.)
+export function groupPayable(group: OrderGroup): number {
+  return groupTotal(group) + (group.deliveryFeeChargedGHS ?? 0);
 }

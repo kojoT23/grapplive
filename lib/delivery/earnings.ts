@@ -32,13 +32,21 @@ export function startOfDay(nowMs: number): number {
   return d.getTime();
 }
 
+// Fees the rider already took from cash they collected (cash on delivery
+// where the buyer pays delivery): earned, but not paid out again.
+export function keptFromCash(deliveries: Delivery[], riderId: string): number {
+  return completedFor(deliveries, riderId)
+    .filter((d) => d.feePaidInCash)
+    .reduce((sum, d) => sum + d.feeGHS, 0);
+}
+
 export function availableToCashOut(
   deliveries: Delivery[],
   cashOuts: CashOut[],
   riderId: string
 ): number {
   const cashedOut = cashOuts.reduce((sum, c) => sum + c.amountGHS, 0);
-  return Math.max(0, totalEarned(deliveries, riderId) - cashedOut);
+  return Math.max(0, totalEarned(deliveries, riderId) - keptFromCash(deliveries, riderId) - cashedOut);
 }
 
 // Cash out everything currently available. Returns the amount, or 0 when

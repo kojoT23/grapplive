@@ -12,6 +12,7 @@ import {
 import type { DeliveryDetails } from "@/lib/mock-data/deliveryDetails";
 import { useAppStore } from "@/lib/store/useAppStore";
 import { useLocationStore } from "@/lib/store/useLocationStore";
+import { deliveryFeeFor } from "@/lib/mock-data/deliveryFees";
 
 // What the delivery side tells an order when a delivery moves along. Keeps
 // the order's coarse status/history in step with the finer delivery record.
@@ -113,8 +114,14 @@ export const useOrdersStore = create<OrdersState>()(
         set((state) => {
           const orderId = nextOrderId(state.orders);
 
+          // The buyer's phone and delivery area, so a rider can reach them —
+          // and the area the delivery fee is worked out for.
+          const buyerPhone = useAppStore.getState().phone || undefined;
+          const deliveryArea = useLocationStore.getState().areaName ?? undefined;
+
           const groups: OrderGroup[] = groupInputs.map((input, idx) => {
             const { status: initialStatus, label: initialLabel } = initialStatusAndLabel(input.paymentMethod);
+            const fee = deliveryFeeFor(input.paymentMethod, input.sellerId, deliveryArea ?? null);
 
             return {
               id: `${orderId}-g${idx + 1}`,
@@ -123,14 +130,13 @@ export const useOrdersStore = create<OrdersState>()(
               items: input.items,
               paymentMethod: input.paymentMethod,
               status: initialStatus,
+              deliveryFeeGHS: fee.feeGHS,
+              deliveryFeeChargedGHS: fee.chargedToBuyerGHS,
               buyerNote: input.paymentMethod === "direct_momo" ? "Payment sent — awaiting confirmation" : undefined,
               history: [{ status: initialStatus, label: initialLabel, timestamp: nowLabel() }],
             };
           });
 
-          // The buyer's phone and delivery area, so a rider can reach them.
-          const buyerPhone = useAppStore.getState().phone || undefined;
-          const deliveryArea = useLocationStore.getState().areaName ?? undefined;
           const newOrder: Order = { id: orderId, groups, buyerPhone, deliveryArea, deliveryDetails };
           return { orders: [newOrder, ...state.orders] };
         }),

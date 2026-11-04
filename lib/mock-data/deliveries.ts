@@ -121,6 +121,10 @@ export type Delivery = {
   // Cash the rider must collect from the customer; 0 when already paid.
   // The cash-handover ledger that tracks this is ROADMAP.md §11 step 3.
   codAmountGHS: number;
+  // True when the buyer pays the delivery fee in cash on delivery: the rider
+  // keeps their fee out of the cash they collect, so it is already paid and
+  // must not be paid out again from earnings.
+  feePaidInCash?: boolean;
   status: DeliveryStatus;
   riderId: string | null;
   riderName: string | null;

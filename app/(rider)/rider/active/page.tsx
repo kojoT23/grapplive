@@ -256,6 +256,12 @@ export default function RiderActivePage() {
           <IconCash size={14} /> Collect GHS {active.codAmountGHS} in cash from the customer
         </div>
       )}
+      {active.codAmountGHS > 0 && active.feePaidInCash && (
+        <div className="mx-3 md:mx-5 mb-3 text-[10px] text-gl-text-secondary">
+          That includes your GHS {active.feeGHS} delivery fee — keep it. You hand
+          GHS {active.codAmountGHS - active.feeGHS} over to the seller.
+        </div>
+      )}
 
         </>
       )}

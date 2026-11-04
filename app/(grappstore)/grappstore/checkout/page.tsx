@@ -5,7 +5,11 @@ import { useRouter } from "next/navigation";
 import { IconArrowLeft } from "@tabler/icons-react";
 import { useGrappStoreCartStore } from "@/lib/store/useGrappStoreCartStore";
 import { useOrdersStore } from "@/lib/store/useOrdersStore";
+import { useLocationStore } from "@/lib/store/useLocationStore";
+import { useDeliveryDetailsForm } from "@/lib/hooks/useDeliveryDetailsForm";
+import { DeliveryDetailsForm } from "@/components/checkout/DeliveryDetailsForm";
 import { getOfficialProductById } from "@/lib/mock-data/officialCatalog";
+import { deliveryFeeFor } from "@/lib/mock-data/deliveryFees";
 
 function formatGHS(amount: number) {
   return `GHS ${amount.toLocaleString("en-GH")}`;
@@ -17,6 +21,8 @@ export default function GrappStoreCheckoutPage() {
   const clearCart = useGrappStoreCartStore((s) => s.clearCart);
   const placeOrder = useOrdersStore((s) => s.placeOrder);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const detailsForm = useDeliveryDetailsForm();
+  const areaName = useLocationStore((s) => s.areaName);
 
   const rows = items
     .map((item) => ({ item, product: getOfficialProductById(item.productId) }))
@@ -24,9 +30,12 @@ export default function GrappStoreCheckoutPage() {
       Boolean(row.product)
     );
 
-  const total = rows.reduce((sum, { item, product }) => sum + product.priceGHS * item.quantity, 0);
+  const subtotal = rows.reduce((sum, { item, product }) => sum + product.priceGHS * item.quantity, 0);
+  // GrappStore has no service-charge option, so the buyer pays delivery.
+  const delivery = deliveryFeeFor("grapplive_fulfilled", "grapplive-official", areaName);
+  const total = subtotal + delivery.chargedToBuyerGHS;
 
-  if (total === 0) {
+  if (subtotal === 0) {
     return (
       <div className="px-3 md:px-5 pt-4">
         <div className="text-[12px] text-gl-text-secondary mb-3">
@@ -43,6 +52,9 @@ export default function GrappStoreCheckoutPage() {
   }
 
   const handlePlaceOrder = () => {
+    const cleanDetails = detailsForm.submit();
+    if (!cleanDetails) return;
+
     setIsPlacingOrder(true);
     setTimeout(() => {
       // GrappStore is merchant of record — GRAPPlive already holds the
@@ -64,7 +76,7 @@ export default function GrappStoreCheckoutPage() {
           items: orderItems,
           paymentMethod: "grapplive_fulfilled",
         },
-      ]);
+      ], cleanDetails);
 
       clearCart();
       router.push("/checkout/confirmation");
@@ -84,6 +96,8 @@ export default function GrappStoreCheckoutPage() {
         GrappStore orders are fulfilled directly by GRAPPlive — payment is confirmed instantly, no
         waiting on a seller.
       </p>
+
+      <DeliveryDetailsForm form={detailsForm} />
 
       {/* Real item list before payment, not just a total — this is the
           moment someone commits real MoMo money, and showing exactly
@@ -112,7 +126,11 @@ export default function GrappStoreCheckoutPage() {
       <div className="border border-gl-border rounded-lg p-3 mb-4">
         <div className="flex justify-between text-[11px] text-gl-text-secondary mb-1">
           <span>Subtotal</span>
-          <span>{formatGHS(total)}</span>
+          <span>{formatGHS(subtotal)}</span>
+        </div>
+        <div className="flex justify-between text-[11px] text-gl-text-secondary mb-1">
+          <span>Delivery</span>
+          <span>{formatGHS(delivery.chargedToBuyerGHS)}</span>
         </div>
         <div className="flex justify-between text-[12px] font-semibold text-gl-text pt-1.5 border-t border-gl-bg-muted mt-1.5">
           <span>Total</span>

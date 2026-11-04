@@ -2,30 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { IconArrowLeft, IconMapPin } from "@tabler/icons-react";
+import { IconArrowLeft } from "@tabler/icons-react";
 import { useCartStore } from "@/lib/store/useCartStore";
-import { useAppStore } from "@/lib/store/useAppStore";
+import { useDeliveryDetailsForm } from "@/lib/hooks/useDeliveryDetailsForm";
+import { DeliveryDetailsForm } from "@/components/checkout/DeliveryDetailsForm";
 import { useLocationStore } from "@/lib/store/useLocationStore";
-import { useBuyerDetailsStore } from "@/lib/store/useBuyerDetailsStore";
-import {
-  EMPTY_DELIVERY_DETAILS,
-  cleanDeliveryDetails,
-  hasDeliveryDetailsErrors,
-  validateDeliveryDetails,
-  type DeliveryDetails,
-  type DeliveryDetailsErrors,
-} from "@/lib/mock-data/deliveryDetails";
-import { getCurrentPin, type PinResult } from "@/lib/utils/getCurrentPin";
-
-const pinErrorMessages: Record<Extract<PinResult, { ok: false }>["reason"], string> = {
-  denied: "Location is turned off for this site. Turn it on in your browser settings, or add a landmark instead.",
-  unavailable: "Couldn't find your location. Try again outdoors, or add a landmark instead.",
-  unsupported: "This browser can't share location. Add a landmark instead.",
-  timeout: "That took too long. Try again, or add a landmark instead.",
-};
 import { useOrdersStore, type NewOrderGroupInput } from "@/lib/store/useOrdersStore";
 import { getProductById } from "@/lib/mock-data/catalog";
 import type { PaymentMethod } from "@/lib/mock-data/orders";
+import { deliveryFeeFor } from "@/lib/mock-data/deliveryFees";
 
 const INSTANT_CONFIRM_FEE_GHS = 2;
 
@@ -41,42 +26,8 @@ export default function CheckoutPage() {
   const [method, setMethod] = useState<PaymentMethod>("instant_confirm");
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
-  // Delivery details: pre-filled from what this phone used last time, once
-  // the saved details have loaded. Synced during render (once) rather than
-  // in an effect, same pattern as the customer notes box.
-  const phone = useAppStore((s) => s.phone);
+  const detailsForm = useDeliveryDetailsForm();
   const areaName = useLocationStore((s) => s.areaName);
-  const savedDetails = useBuyerDetailsStore((s) => (phone ? s.detailsByPhone[phone] : undefined));
-  const detailsHydrated = useBuyerDetailsStore((s) => s.hasHydrated);
-  const saveDetails = useBuyerDetailsStore((s) => s.saveDetails);
-  const [details, setDetails] = useState<DeliveryDetails>(EMPTY_DELIVERY_DETAILS);
-  const [detailsErrors, setDetailsErrors] = useState<DeliveryDetailsErrors>({});
-  const [prefilled, setPrefilled] = useState(false);
-  const [isLocating, setIsLocating] = useState(false);
-  const [pinError, setPinError] = useState("");
-  if (detailsHydrated && !prefilled) {
-    setPrefilled(true);
-    // A saved location pin is never pre-filled: it'd be where they stood
-    // last time, not necessarily where this order is going.
-    if (savedDetails) setDetails({ ...savedDetails, pin: undefined });
-  }
-
-  const handleSharePin = async () => {
-    setIsLocating(true);
-    setPinError("");
-    const result = await getCurrentPin();
-    setIsLocating(false);
-    if (result.ok) {
-      setDetails((d) => ({ ...d, pin: result.pin }));
-      setDetailsErrors({});
-    } else {
-      setPinError(pinErrorMessages[result.reason]);
-    }
-  };
-  const updateDetail = (field: keyof DeliveryDetails, value: string) => {
-    setDetails((d) => ({ ...d, [field]: value }));
-    setDetailsErrors({});
-  };
 
   // Resolved once, reused both for the on-screen summary and for building
   // the OrderGroups on submit — one source of truth instead of two
@@ -108,7 +59,20 @@ export default function CheckoutPage() {
     );
   }
 
-  const total = method === "instant_confirm" ? subtotal + INSTANT_CONFIRM_FEE_GHS : subtotal;
+  // Delivery is charged per seller (each ships separately). With Instant Confirm
+  // GRAPPlive covers it; with the no-fee options the buyer pays it.
+  const deliveryFees = Object.entries(
+    lineItems.reduce<Record<string, string>>((acc, { product }) => {
+      acc[product.sellerId] = product.sellerName;
+      return acc;
+    }, {})
+  ).map(([sellerId, sellerName]) => ({
+    sellerName,
+    ...deliveryFeeFor(method, sellerId, areaName),
+  }));
+  const deliveryTotal = deliveryFees.reduce((sum, f) => sum + f.chargedToBuyerGHS, 0);
+  const total =
+    subtotal + (method === "instant_confirm" ? INSTANT_CONFIRM_FEE_GHS : 0) + deliveryTotal;
 
   // Grouped by seller purely for the on-screen summary — with a
   // multi-seller cart, buyers should see which items ship from which
@@ -124,14 +88,8 @@ export default function CheckoutPage() {
   }, {});
 
   const handlePlaceOrder = () => {
-    const errors = validateDeliveryDetails(details);
-    if (hasDeliveryDetailsErrors(errors)) {
-      setDetailsErrors(errors);
-      return;
-    }
-    const cleanDetails = cleanDeliveryDetails(details);
-    // The pin is a one-time snapshot, so only the typed details are remembered.
-    if (phone) saveDetails(phone, { ...cleanDetails, pin: undefined });
+    const cleanDetails = detailsForm.submit();
+    if (!cleanDetails) return;
 
     setIsPlacingOrder(true);
     setTimeout(() => {
@@ -175,69 +133,7 @@ export default function CheckoutPage() {
         <h1 className="text-[14px] font-semibold text-gl-text">How do you want to pay?</h1>
       </div>
 
-      <div className="border border-gl-border rounded-lg p-3 mb-4">
-        <h2 className="text-[11px] font-semibold text-gl-text mb-0.5">Delivery details</h2>
-        <p className="text-[9px] text-gl-text-secondary mb-2.5">
-          {areaName ? `Delivering in ${areaName}. ` : ""}Your rider sees these only once they accept your order.
-        </p>
-        <input
-          type="text"
-          value={details.name}
-          onChange={(e) => updateDetail("name", e.target.value)}
-          placeholder="Your name"
-          autoComplete="name"
-          className="w-full border border-gl-border-strong rounded-lg px-3 py-2 text-[12px] text-gl-text outline-none mb-1 transition-colors focus:border-gl-brand"
-        />
-        {detailsErrors.name && <p className="text-[10px] text-gl-red mb-1">{detailsErrors.name}</p>}
-        <input
-          type="text"
-          value={details.digitalAddress}
-          onChange={(e) => updateDetail("digitalAddress", e.target.value)}
-          placeholder="Digital address, e.g. GA-123-4567 (optional)"
-          autoCapitalize="characters"
-          className="w-full border border-gl-border-strong rounded-lg px-3 py-2 text-[12px] text-gl-text outline-none mt-1.5 mb-1 transition-colors focus:border-gl-brand"
-        />
-        {detailsErrors.digitalAddress && (
-          <p className="text-[10px] text-gl-red mb-1">{detailsErrors.digitalAddress}</p>
-        )}
-        <textarea
-          value={details.landmark}
-          onChange={(e) => updateDetail("landmark", e.target.value)}
-          placeholder="Landmark or directions, e.g. opposite the Shell station, blue gate"
-          rows={2}
-          className="w-full border border-gl-border-strong rounded-lg px-3 py-2 text-[12px] text-gl-text outline-none mt-1.5 transition-colors focus:border-gl-brand resize-none"
-        />
-
-        <div className="mt-2.5">
-          {details.pin ? (
-            <div className="flex items-center justify-between border border-gl-brand rounded-lg px-3 py-2">
-              <div className="flex items-center gap-1.5 text-[11px] font-semibold text-gl-brand">
-                <IconMapPin size={14} /> Location shared
-                <span className="font-normal text-gl-text-secondary">· within {details.pin.accuracyM} m</span>
-              </div>
-              <button
-                onClick={() => setDetails((d) => ({ ...d, pin: undefined }))}
-                className="text-[10px] text-gl-text-secondary active:opacity-60"
-              >
-                Remove
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={handleSharePin}
-              disabled={isLocating}
-              className="w-full flex items-center justify-center gap-1.5 border border-gl-brand text-gl-brand rounded-lg py-2 text-[11px] font-semibold active:bg-gl-brand-soft-bg transition-colors disabled:opacity-60"
-            >
-              <IconMapPin size={14} /> {isLocating ? "Finding you…" : "Share my current location"}
-            </button>
-          )}
-          <p className="text-[9px] text-gl-text-secondary mt-1">
-            Only share this while you&apos;re at the place you want it delivered.
-          </p>
-          {pinError && <p className="text-[10px] text-gl-red mt-1">{pinError}</p>}
-        </div>
-        {detailsErrors.form && <p className="text-[10px] text-gl-red mt-1">{detailsErrors.form}</p>}
-      </div>
+      <DeliveryDetailsForm form={detailsForm} />
 
       {/* Real item list before payment, grouped by seller so a multi-seller
           cart is legible — this is the moment someone commits real MoMo
@@ -290,7 +186,7 @@ export default function CheckoutPage() {
           Approve with your MoMo PIN — order starts right away, no waiting on the seller
         </p>
         <div className="text-[10px] font-semibold text-gl-text">
-          +{formatGHS(INSTANT_CONFIRM_FEE_GHS)} fee
+          +{formatGHS(INSTANT_CONFIRM_FEE_GHS)} fee · delivery included
         </div>
       </button>
 
@@ -305,7 +201,7 @@ export default function CheckoutPage() {
           Send payment yourself, then confirm — seller checks and confirms manually, may take a
           few hours
         </p>
-        <div className="text-[10px] font-semibold text-gl-text">No fee</div>
+        <div className="text-[10px] font-semibold text-gl-text">No fee · you pay delivery</div>
       </button>
 
       <button
@@ -318,7 +214,7 @@ export default function CheckoutPage() {
         <p className="text-[10px] text-gl-text-secondary mb-1.5">
           Pay the rider in cash when your order arrives — have the exact amount ready
         </p>
-        <div className="text-[10px] font-semibold text-gl-text">No fee</div>
+        <div className="text-[10px] font-semibold text-gl-text">No fee · you pay delivery</div>
       </button>
 
       {/* Subtotal/fee/total breakdown, reactive to the payment method
@@ -336,6 +232,12 @@ export default function CheckoutPage() {
             <span>{formatGHS(INSTANT_CONFIRM_FEE_GHS)}</span>
           </div>
         )}
+        {deliveryFees.map((f) => (
+          <div key={f.sellerName} className="flex justify-between text-[11px] text-gl-text-secondary mb-1">
+            <span>{deliveryFees.length > 1 ? `Delivery · ${f.sellerName}` : "Delivery"}</span>
+            <span>{f.chargedToBuyerGHS > 0 ? formatGHS(f.chargedToBuyerGHS) : "Included"}</span>
+          </div>
+        ))}
         <div className="flex justify-between text-[12px] font-semibold text-gl-text pt-1.5 border-t border-gl-bg-muted mt-1.5">
           <span>Total</span>
           <span>{formatGHS(total)}</span>

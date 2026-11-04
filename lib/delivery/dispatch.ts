@@ -1,6 +1,6 @@
 import { getStoreBySellerId } from "@/lib/mock-data/stores";
 import { ACTIVE_DELIVERY_STATUSES, canRequestAgain } from "@/lib/mock-data/deliveries";
-import { groupTotal } from "@/lib/mock-data/orders";
+import { groupPayable } from "@/lib/mock-data/orders";
 import { useOrdersStore } from "@/lib/store/useOrdersStore";
 import { latestDeliveryForGroup, useDeliveryStore } from "@/lib/store/useDeliveryStore";
 
@@ -40,9 +40,15 @@ export function requestDeliveryForGroup(groupId: string): void {
     digitalAddress: order.deliveryDetails?.digitalAddress,
     landmark: order.deliveryDetails?.landmark,
     pin: order.deliveryDetails?.pin,
-    // Cash on delivery: the rider collects the item total from the buyer,
-    // and that cash is tracked in the cash ledger until it reaches the
-    // seller. Every other payment method is already paid.
-    codAmountGHS: group.paymentMethod === "cash_on_delivery" ? groupTotal(group) : 0,
+    // The delivery fee is the rider's pay; fixture orders without one fall
+    // back to the mock trip estimate.
+    feeGHS: group.deliveryFeeGHS,
+    // Cash on delivery: the rider collects everything the buyer owes (items
+    // plus any delivery fee they're charged). The items part is tracked in the
+    // cash ledger until it reaches the seller; the rider keeps the delivery
+    // fee from it. Every other payment method is already paid.
+    codAmountGHS: group.paymentMethod === "cash_on_delivery" ? groupPayable(group) : 0,
+    feePaidInCash:
+      group.paymentMethod === "cash_on_delivery" && (group.deliveryFeeChargedGHS ?? 0) > 0,
   });
 }

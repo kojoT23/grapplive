@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { IconArrowLeft, IconCircleCheck, IconCircle, IconPhone, IconStar, IconStarFilled } from "@tabler/icons-react";
 import { useOrdersStore } from "@/lib/store/useOrdersStore";
-import { flattenGroups, groupTotal, type OrderStatus } from "@/lib/mock-data/orders";
+import { flattenGroups, groupPayable, groupTotal, type OrderStatus } from "@/lib/mock-data/orders";
 import { useDeliveryStore, latestDeliveryForGroup } from "@/lib/store/useDeliveryStore";
 import { getRiderByIdSync } from "@/lib/store/useRiderIdentityStore";
 import {
@@ -208,8 +208,24 @@ export default function BuyerOrderDetailPage() {
               </div>
             </div>
           ))}
+          {group.deliveryFeeGHS !== undefined && (
+            <div className="flex justify-between text-[10px] text-gl-text-secondary pt-1">
+              <span>Items</span>
+              <span>GHS {groupTotal(group).toLocaleString("en-GH")}</span>
+            </div>
+          )}
+          {group.deliveryFeeGHS !== undefined && (
+            <div className="flex justify-between text-[10px] text-gl-text-secondary pb-1">
+              <span>Delivery</span>
+              <span>
+                {(group.deliveryFeeChargedGHS ?? 0) > 0
+                  ? `GHS ${group.deliveryFeeChargedGHS!.toLocaleString("en-GH")}`
+                  : "Covered by Instant Confirm"}
+              </span>
+            </div>
+          )}
           <div className="text-[11px] font-semibold text-gl-text text-right">
-            Total: GHS {groupTotal(group).toLocaleString("en-GH")}
+            Total: GHS {groupPayable(group).toLocaleString("en-GH")}
           </div>
         </div>
 
@@ -233,7 +249,7 @@ export default function BuyerOrderDetailPage() {
           <div className="border border-gl-border rounded-lg p-3 mb-4">
             <div className="text-[10px] font-semibold text-gl-text mb-0.5">CASH ON DELIVERY</div>
             <div className="text-[11px] text-gl-text-secondary">
-              Pay GHS {groupTotal(group).toLocaleString("en-GH")} in cash to your rider when your order arrives.
+              Pay GHS {groupPayable(group).toLocaleString("en-GH")} in cash to your rider when your order arrives.
             </div>
           </div>
         )}

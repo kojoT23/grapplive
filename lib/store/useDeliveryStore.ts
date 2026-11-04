@@ -43,6 +43,10 @@ export type NewDeliveryInput = {
   landmark?: string;
   pin?: DeliveryPin;
   codAmountGHS: number;
+  // The delivery fee (the rider's pay) when the order has one; otherwise the
+  // mock trip estimate is used.
+  feeGHS?: number;
+  feePaidInCash?: boolean;
 };
 
 export type AcceptResult = "ok" | "gone" | "busy" | "offline" | "unknown_rider" | "cash_limit";
@@ -171,7 +175,9 @@ export const useDeliveryStore = create<DeliveryState>()(
           landmark: input.landmark,
           pin: input.pin,
           ...trip,
+          feeGHS: input.feeGHS ?? trip.feeGHS,
           codAmountGHS: input.codAmountGHS,
+          feePaidInCash: input.feePaidInCash,
           status: "offered",
           riderId: null,
           riderName: null,
@@ -306,7 +312,9 @@ export const useDeliveryStore = create<DeliveryState>()(
             riderName: delivery.riderName,
             sellerId: delivery.sellerId,
             sellerName: delivery.sellerName,
-            amountGHS: delivery.codAmountGHS,
+            // Only what's owed to the seller: if the buyer paid the delivery
+            // fee in cash, the rider keeps that part.
+            amountGHS: delivery.codAmountGHS - (delivery.feePaidInCash ? delivery.feeGHS : 0),
           });
         }
         return "ok";

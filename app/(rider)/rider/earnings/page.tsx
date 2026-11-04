@@ -16,6 +16,7 @@ import {
 import {
   availableToCashOut,
   earnedSince,
+  keptFromCash,
   requestCashOut,
   startOfDay,
 } from "@/lib/delivery/earnings";
@@ -57,6 +58,7 @@ export default function RiderEarningsPage() {
   const available = availableToCashOut(deliveries, cashOuts, rider.id);
   const today = earnedSince(deliveries, rider.id, startOfDay(now));
   const week = earnedSince(deliveries, rider.id, now - 7 * DAY_MS);
+  const kept = keptFromCash(deliveries, rider.id);
   const myEntries = entriesForRider(entries, rider.id);
   const held = heldTotal(entries, rider.id);
   const nearLimit = held >= CASH_HOLD_LIMIT_GHS * 0.8;
@@ -84,6 +86,11 @@ export default function RiderEarningsPage() {
         <p className="text-[9px] text-gl-text-secondary mt-2">
           Goes to the MoMo on {rider.phone}. Prototype: no real money moves yet.
         </p>
+        {kept > 0 && (
+          <p className="text-[9px] text-gl-text-secondary mt-1">
+            {ghs(kept)} of your earnings you already kept from cash payments isn&apos;t included here.
+          </p>
+        )}
       </div>
 
       <div className="mx-3 md:mx-5 mb-4 grid grid-cols-3 gap-2">
