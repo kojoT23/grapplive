@@ -673,6 +673,47 @@ tracking, real payouts/SMS), and the GrappStore staff role.
 
 ---
 
+## 12. GrappStore staff role — delivery operations
+
+Staff already had a passphrase screen (`/grappstore/staff-access`, NOT real
+security), the fulfillment page and add-product, gated by the `grapplive_staff`
+permission. New: an **Ops hub** at `/grappstore/ops` (linked from the GrappStore
+account page) giving GRAPPlive support one view across every seller and rider
+(AGENTS.md §4.5, §33). Three tabs:
+- **Deliveries** — a board with filters (Needs attention / Open / In progress /
+  Scheduled / All). "Needs attention" (`deliveryAttention`, thresholds in
+  `ATTENTION`) flags a same-day request nobody accepted for 10 min, a scheduled
+  job unclaimed on its day or never started, a rider stalled 60 min on the way
+  to / at the seller, a parcel not brought back after 2 h, and a returned parcel
+  the seller hasn't confirmed in 24 h. Each card expands to a **timeline** (who
+  did what, from which state to which, with an optional reason) and the tools:
+  *Send out again* / *Reassign to another rider* (`staffReassign` — not back to
+  the same rider), *Cancel delivery* (`staffCancel`, restores the order so the
+  seller can re-request) and *Confirm parcel received* on a seller's behalf
+  (`staffConfirmParcelReceived`). Support can intervene until the parcel is
+  picked up (`STAFF_CAN_INTERVENE`).
+- **Cash** — cash that needs attention: disputes, cash held against a rider,
+  handovers a seller left unanswered 48 h. Support resolves a dispute as *Cash
+  was received* (settled) or *Hold rider responsible* (`rider_liable`: still
+  counts toward the cash limit, the rider can't hand it over themselves) and
+  records *Rider has repaid* (`staffResolveDispute`, `staffMarkRepaid`).
+- **Riders** — everyone who signed up: status, area, trips, rating, cash held,
+  current delivery; **suspend / reinstate** (`staffSetSuspended`): a suspended
+  rider goes offline and can't go online, accept or claim; a delivery already
+  in progress isn't taken away. Riders see a banner explaining it.
+Every delivery change now records its **actor** (buyer / seller / rider /
+staff) in `Delivery.history`, so the timeline shows who did what. All staff
+actions refuse a non-staff session (`isStaffSession`), so the checks live in the
+store, not only in the UI — but the staff role itself still comes from the
+passphrase screen, so none of this is real access control until there's a
+backend. *Not built:* an actual charge to a rider held liable (no payments),
+making a seller whole when a rider is liable, notifications to the people
+affected by a staff action, staff roles/permissions beyond all-or-nothing, an
+audit log outside each delivery's own timeline, and the rest of §4.5 (users,
+sellers, products, refunds, commissions, analytics).
+
+---
+
 ## 10. Test coverage
 
 ### 10.1 ✅ Resolved — zero automated tests existed until this pass
@@ -701,6 +742,9 @@ lower return at this stage:
 - `lib/store/useStoreProfileStore.test.ts` (added later, 8 tests) — the
   per-seller storefront profile: seeding, isolation between sellers, and
   the migration from the old single-seller shape.
+- `lib/delivery/staffOps.test.ts` (24 tests) — the stuck-delivery rules, the
+  who-did-what timeline, staff reassign / cancel / confirm, cash dispute
+  resolution, rider suspension and the overview counts.
 - `lib/store/useScheduledDelivery.test.ts` (24 tests) — delivery-day helpers
   and scheduled delivery: claiming, several stops in a day, starting only on
   the day and one at a time, per-stop pay, handing back and cancelling.

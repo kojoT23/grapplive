@@ -41,6 +41,16 @@ export default function GrappStoreAccountPage() {
             <span className="text-[9px] text-gl-text-secondary">Internal — manage orders</span>
           </div>
         </Link>
+        <Link
+          href="/grappstore/ops"
+          className="flex items-center gap-3 border border-gl-border-strong rounded-lg px-3 py-2.5 active:bg-gl-bg-muted transition-colors"
+        >
+          <IconTruckDelivery size={18} className="text-gl-brand" />
+          <div>
+            <span className="text-[12px] text-gl-text block">Delivery operations (staff)</span>
+            <span className="text-[9px] text-gl-text-secondary">Internal — manage orders</span>
+          </div>
+        </Link>
       </div>
     </div>
   );

@@ -8,7 +8,9 @@
 //   settled          seller confirmed — the cash trail is closed
 //   disputed         the seller says they did NOT receive it; the rider is
 //                    still responsible for the cash and can hand it over again
-export type CashEntryStatus = "held" | "handover_pending" | "settled" | "disputed";
+//   rider_liable     support looked into a dispute and held the rider
+//                    responsible: they owe the money until support marks it repaid
+export type CashEntryStatus = "held" | "handover_pending" | "settled" | "disputed" | "rider_liable";
 
 export type CashEntry = {
   id: string;
@@ -24,6 +26,8 @@ export type CashEntry = {
   handedOverAt?: number;
   settledAt?: number;
   disputedAt?: number;
+  resolvedAt?: number; // when support resolved a dispute or recorded a repayment
+  staffNote?: string; // support's reason, for the audit trail
 };
 
 // A rider holding this much (or more) unhanded cash can't accept new jobs

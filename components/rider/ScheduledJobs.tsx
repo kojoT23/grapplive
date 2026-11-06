@@ -44,6 +44,7 @@ export function ScheduledJobs({
   const handleClaim = (id: string) => {
     const result = claimScheduled(id, riderId);
     if (result === "ok") say(id, "");
+    else if (result === "suspended") say(id, "Your account is suspended. Contact GRAPPlive support.");
     else if (result === "cash_limit") say(id, "Hand over the cash you're holding (Earnings tab) before claiming more jobs.");
     else say(id, "That job is no longer available.");
   };

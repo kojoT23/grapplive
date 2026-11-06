@@ -47,6 +47,7 @@ function OfferCard({ delivery, riderId }: { delivery: Delivery; riderId: string 
     if (result === "ok") router.push("/rider/active");
     else if (result === "busy") setMessage("Finish your current delivery first.");
     else if (result === "offline") setMessage("Go online to accept jobs.");
+    else if (result === "suspended") setMessage("Your account is suspended. Contact GRAPPlive support.");
     else if (result === "cash_limit")
       setMessage("You're holding too much cash. Hand it over (Earnings tab) before taking new jobs.");
     else setMessage("This job is no longer available.");
@@ -114,6 +115,7 @@ export default function RiderJobsPage() {
   const ledgerHydrated = useCashLedgerStore((s) => s.hasHydrated);
   const online = useRiderStore((s) => (rider ? s.onlineByRider[rider.id] === true : false));
   const setOnline = useRiderStore((s) => s.setOnline);
+  const suspended = useRiderStore((s) => (rider ? s.suspendedByRider[rider.id] === true : false));
   const restoreOffer = useDeliveryStore((s) => s.restoreOffer);
   const now = useNow();
 
@@ -178,7 +180,7 @@ export default function RiderJobsPage() {
         </div>
         <button
           onClick={() => setOnline(rider.id, !online)}
-          disabled={Boolean(active)}
+          disabled={Boolean(active) || suspended}
           aria-pressed={online}
           className={`text-[11px] font-semibold px-3.5 py-1.5 rounded-full transition-colors disabled:opacity-40 ${
             online ? "bg-gl-green text-white" : "bg-gl-bg-muted text-gl-text active:bg-gl-border"
@@ -187,6 +189,15 @@ export default function RiderJobsPage() {
           {online ? "Online" : "Go online"}
         </button>
       </div>
+
+      {suspended && (
+        <div className="mx-3 md:mx-5 mb-3 border border-gl-red rounded-lg px-3 py-2.5">
+          <div className="text-[11px] font-semibold text-gl-red">Your account is suspended</div>
+          <div className="text-[10px] text-gl-text-secondary">
+            You can&apos;t go online or take new jobs. Contact GRAPPlive support to find out why and how to get back.
+          </div>
+        </div>
+      )}
 
       {heldCash > 0 && (
         <Link

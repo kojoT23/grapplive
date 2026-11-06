@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { safeJSONStorage } from "@/lib/utils/safe-storage";
 import type { CashEntry } from "@/lib/mock-data/cash";
+import { isStaffSession } from "@/lib/store/useAppStore";
 
 // The cash ledger for cash-on-delivery orders. Entries are only ever created
 // by the delivery side when a COD delivery is completed with the customer's
@@ -28,15 +29,28 @@ type CashLedgerState = {
   confirmReceived: (entryId: string, sellerId: string) => "ok" | "invalid";
   // The seller says the handed-over cash never arrived.
   disputeReceived: (entryId: string, sellerId: string) => "ok" | "invalid";
+  // Support resolves a disputed handover: either the cash was in fact received
+  // (settled), or the rider is held responsible for it (rider_liable).
+  staffResolveDispute: (
+    entryId: string,
+    outcome: "settled" | "rider_liable",
+    note?: string
+  ) => "ok" | "invalid" | "forbidden";
+  // Support records that a rider held responsible has repaid.
+  staffMarkRepaid: (entryId: string, note?: string) => "ok" | "invalid" | "forbidden";
 };
 
 // ---- Selectors ----
 
 // Cash the rider is still responsible for: collected and not yet handed
-// over, or handed over but disputed by the seller.
+// over, handed over but disputed by the seller, or held against them by support.
 export function heldTotal(entries: CashEntry[], riderId: string): number {
   return entries
-    .filter((e) => e.riderId === riderId && (e.status === "held" || e.status === "disputed"))
+    .filter(
+      (e) =>
+        e.riderId === riderId &&
+        (e.status === "held" || e.status === "disputed" || e.status === "rider_liable")
+    )
     .reduce((sum, e) => sum + e.amountGHS, 0);
 }
 
@@ -119,6 +133,46 @@ export const useCashLedgerStore = create<CashLedgerState>()(
         set((state) => ({
           entries: state.entries.map((e) =>
             e.id === entryId ? { ...e, status: "disputed", disputedAt: Date.now() } : e
+          ),
+        }));
+        return "ok";
+      },
+
+      staffResolveDispute: (entryId, outcome, note) => {
+        if (!isStaffSession()) return "forbidden";
+        const entry = get().entries.find((e) => e.id === entryId);
+        if (!entry || entry.status !== "disputed") return "invalid";
+        set((state) => ({
+          entries: state.entries.map((e) =>
+            e.id === entryId
+              ? {
+                  ...e,
+                  status: outcome,
+                  resolvedAt: Date.now(),
+                  ...(outcome === "settled" ? { settledAt: Date.now() } : {}),
+                  ...(note?.trim() ? { staffNote: note.trim() } : {}),
+                }
+              : e
+          ),
+        }));
+        return "ok";
+      },
+
+      staffMarkRepaid: (entryId, note) => {
+        if (!isStaffSession()) return "forbidden";
+        const entry = get().entries.find((e) => e.id === entryId);
+        if (!entry || entry.status !== "rider_liable") return "invalid";
+        set((state) => ({
+          entries: state.entries.map((e) =>
+            e.id === entryId
+              ? {
+                  ...e,
+                  status: "settled",
+                  resolvedAt: Date.now(),
+                  settledAt: Date.now(),
+                  ...(note?.trim() ? { staffNote: note.trim() } : {}),
+                }
+              : e
           ),
         }));
         return "ok";

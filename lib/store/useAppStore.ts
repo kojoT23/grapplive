@@ -75,3 +75,11 @@ export const useAppStore = create<AppState>()(
     }
   )
 );
+
+// Is the signed-in session GRAPPlive staff? The staff actions in the delivery,
+// cash and rider stores check this, so they refuse anyone else even if a
+// button were somehow reached. (Prototype: the role comes from the passphrase
+// screen. A real backend checks it server-side.)
+export function isStaffSession(): boolean {
+  return useAppStore.getState().roles.includes("grapplive_staff");
+}

@@ -5,6 +5,7 @@ import {
   ACTIVE_DELIVERY_STATUSES,
   CANCELLABLE_BY_SELLER,
   RELEASABLE_BY_RIDER,
+  STAFF_CAN_INTERVENE,
   mustReturnParcel,
   NEXT_STEP,
   OTP_MAX_ATTEMPTS,
@@ -12,11 +13,13 @@ import {
   failureReasonLabels,
   failureReasonsFor,
   type Delivery,
+  type DeliveryActor,
   type DeliveryStatus,
   type FailureReason,
 } from "@/lib/mock-data/deliveries";
 import { useOrdersStore } from "@/lib/store/useOrdersStore";
 import { useRiderStore } from "@/lib/store/useRiderStore";
+import { isStaffSession } from "@/lib/store/useAppStore";
 import { useCashLedgerStore, heldTotal } from "@/lib/store/useCashLedgerStore";
 import { CASH_HOLD_LIMIT_GHS } from "@/lib/mock-data/cash";
 import type { DeliveryPin } from "@/lib/mock-data/deliveryDetails";
@@ -51,7 +54,8 @@ export type NewDeliveryInput = {
   feePaidInCash?: boolean;
 };
 
-export type AcceptResult = "ok" | "gone" | "busy" | "offline" | "unknown_rider" | "cash_limit";
+export type AcceptResult = "ok" | "gone" | "busy" | "offline" | "unknown_rider" | "cash_limit" | "suspended";
+export type StaffResult = "ok" | "invalid" | "forbidden";
 export type StepResult = "ok" | "invalid";
 export type CompleteResult = "ok" | "wrong_otp" | "locked" | "invalid";
 export type RateResult = "ok" | "invalid" | "already_rated" | "not_buyer";
@@ -90,6 +94,12 @@ type DeliveryState = {
   // no need to be online), then starts it on the day. Pay is per stop, so a
   // rider with several claimed stops is paid for each one.
   claimScheduled: (deliveryId: string, riderId: string) => AcceptResult;
+  // Support (GRAPPlive staff) stepping in on a stuck delivery, until the parcel
+  // is picked up. Each is recorded with "staff" as the actor and an optional
+  // note. They refuse anyone who isn't a staff session.
+  staffReassign: (deliveryId: string, note?: string) => StaffResult;
+  staffCancel: (deliveryId: string, note?: string) => StaffResult;
+  staffConfirmParcelReceived: (deliveryId: string, note?: string) => StaffResult;
   startScheduledStop: (deliveryId: string, riderId: string, nowMs?: number) => StartResult;
 };
 
@@ -181,8 +191,30 @@ function patchDelivery(
   return deliveries.map((d) => (d.id === id ? patch(d) : d));
 }
 
-function withStatus(d: Delivery, status: DeliveryStatus): Delivery {
-  return { ...d, status, history: [...d.history, { status, at: Date.now() }] };
+// Puts an order back to where it was before a rider was requested (confirmed
+// or being prepared), so the seller can request again whenever they like.
+function restoreOrderBeforeDispatch(orderGroupId: string, label: string) {
+  const group = useOrdersStore
+    .getState()
+    .orders.flatMap((o) => o.groups)
+    .find((g) => g.id === orderGroupId);
+  const before = [...(group?.history ?? [])]
+    .reverse()
+    .find((h) => h.status === "ready_to_pack" || h.status === "preparing");
+  useOrdersStore.getState().applyDeliveryUpdate(orderGroupId, {
+    status: before?.status ?? "preparing",
+    label,
+    riderName: null,
+    etaMinutes: null,
+  });
+}
+
+function withStatus(d: Delivery, status: DeliveryStatus, by?: DeliveryActor, note?: string): Delivery {
+  return {
+    ...d,
+    status,
+    history: [...d.history, { status, at: Date.now(), ...(by ? { by } : {}), ...(note ? { note } : {}) }],
+  };
 }
 
 export const useDeliveryStore = create<DeliveryState>()(
@@ -221,7 +253,7 @@ export const useDeliveryStore = create<DeliveryState>()(
           declinedBy: [],
           offerSeenAt: {},
           createdAt: now,
-          history: [{ status: "offered", at: now }],
+          history: [{ status: "offered", at: now, by: "seller" }],
         };
         set({ deliveries: [...existing, delivery] });
         return delivery;
@@ -265,6 +297,7 @@ export const useDeliveryStore = create<DeliveryState>()(
       acceptOffer: (deliveryId, riderId) => {
         const rider = getRiderByIdSync(riderId);
         if (!rider) return "unknown_rider";
+        if (useRiderStore.getState().isSuspended(riderId)) return "suspended";
         if (!useRiderStore.getState().isOnline(riderId)) return "offline";
 
         const { deliveries } = get();
@@ -286,7 +319,7 @@ export const useDeliveryStore = create<DeliveryState>()(
 
         set({
           deliveries: patchDelivery(deliveries, deliveryId, (d) => ({
-            ...withStatus(d, "heading_to_pickup"),
+            ...withStatus(d, "heading_to_pickup", "rider"),
             riderId,
             riderName: rider.name,
           })),
@@ -307,7 +340,7 @@ export const useDeliveryStore = create<DeliveryState>()(
         if (!step) return "invalid";
 
         set((state) => ({
-          deliveries: patchDelivery(state.deliveries, deliveryId, (d) => withStatus(d, step.to)),
+          deliveries: patchDelivery(state.deliveries, deliveryId, (d) => withStatus(d, step.to, "rider")),
         }));
         if (step.to === "out_for_delivery") {
           useOrdersStore.getState().applyDeliveryUpdate(delivery.orderGroupId, {
@@ -337,7 +370,7 @@ export const useDeliveryStore = create<DeliveryState>()(
         }
 
         set((state) => ({
-          deliveries: patchDelivery(state.deliveries, deliveryId, (d) => withStatus(d, "delivered")),
+          deliveries: patchDelivery(state.deliveries, deliveryId, (d) => withStatus(d, "delivered", "rider")),
         }));
         useOrdersStore.getState().applyDeliveryUpdate(delivery.orderGroupId, {
           status: "delivered",
@@ -394,7 +427,7 @@ export const useDeliveryStore = create<DeliveryState>()(
           // back with the seller. The order stays "out for delivery".
           set((state) => ({
             deliveries: patchDelivery(state.deliveries, deliveryId, (d) => ({
-              ...withStatus(d, "returning"),
+              ...withStatus(d, "returning", "rider"),
               failureReason: reason,
             })),
           }));
@@ -409,7 +442,7 @@ export const useDeliveryStore = create<DeliveryState>()(
         // order goes straight back to the seller to sort out.
         set((state) => ({
           deliveries: patchDelivery(state.deliveries, deliveryId, (d) => ({
-            ...withStatus(d, "failed"),
+            ...withStatus(d, "failed", "rider"),
             failureReason: reason,
           })),
         }));
@@ -428,7 +461,7 @@ export const useDeliveryStore = create<DeliveryState>()(
           return "invalid";
         }
         set((state) => ({
-          deliveries: patchDelivery(state.deliveries, deliveryId, (d) => withStatus(d, "returned")),
+          deliveries: patchDelivery(state.deliveries, deliveryId, (d) => withStatus(d, "returned", "rider")),
         }));
         useOrdersStore.getState().applyDeliveryUpdate(delivery.orderGroupId, {
           status: "ready_for_pickup",
@@ -472,29 +505,16 @@ export const useDeliveryStore = create<DeliveryState>()(
           return "invalid";
         }
         set((state) => ({
-          deliveries: patchDelivery(state.deliveries, deliveryId, (d) => withStatus(d, "cancelled")),
+          deliveries: patchDelivery(state.deliveries, deliveryId, (d) => withStatus(d, "cancelled", "seller")),
         }));
-        // Back to where the order was before a rider was requested, so the
-        // seller can request again whenever they like.
-        const group = useOrdersStore
-          .getState()
-          .orders.flatMap((o) => o.groups)
-          .find((g) => g.id === delivery.orderGroupId);
-        const before = [...(group?.history ?? [])]
-          .reverse()
-          .find((h) => h.status === "ready_to_pack" || h.status === "preparing");
-        useOrdersStore.getState().applyDeliveryUpdate(delivery.orderGroupId, {
-          status: before?.status ?? "preparing",
-          label: "Delivery request cancelled by the seller",
-          riderName: null,
-          etaMinutes: null,
-        });
+        restoreOrderBeforeDispatch(delivery.orderGroupId, "Delivery request cancelled by the seller");
         return "ok";
       },
 
       claimScheduled: (deliveryId, riderId) => {
         const rider = getRiderByIdSync(riderId);
         if (!rider) return "unknown_rider";
+        if (useRiderStore.getState().isSuspended(riderId)) return "suspended";
         // A claim is a promise to turn up, so the same unhanded-cash rule applies.
         if (heldTotal(useCashLedgerStore.getState().entries, riderId) >= CASH_HOLD_LIMIT_GHS) {
           return "cash_limit";
@@ -512,7 +532,7 @@ export const useDeliveryStore = create<DeliveryState>()(
 
         set((state) => ({
           deliveries: patchDelivery(state.deliveries, deliveryId, (d) => ({
-            ...withStatus(d, "scheduled"),
+            ...withStatus(d, "scheduled", "rider"),
             riderId,
             riderName: rider.name,
           })),
@@ -543,12 +563,93 @@ export const useDeliveryStore = create<DeliveryState>()(
         // From here it's an ordinary trip: pickup, drop-off, OTP. The ETA
         // counts down from now, not from when it was claimed.
         set((state) => ({
-          deliveries: patchDelivery(state.deliveries, deliveryId, (d) => withStatus(d, "heading_to_pickup")),
+          deliveries: patchDelivery(state.deliveries, deliveryId, (d) => withStatus(d, "heading_to_pickup", "rider")),
         }));
         useOrdersStore.getState().applyDeliveryUpdate(delivery.orderGroupId, {
           status: "rider_assigned",
           label: `${delivery.riderName} is on the way to the seller`,
           etaMinutes: delivery.etaMinutes,
+        });
+        return "ok";
+      },
+
+      staffReassign: (deliveryId, note) => {
+        if (!isStaffSession()) return "forbidden";
+        const delivery = get().deliveries.find((d) => d.id === deliveryId);
+        if (!delivery || !STAFF_CAN_INTERVENE.includes(delivery.status)) return "invalid";
+
+        if (delivery.status === "offered") {
+          // Nobody has it: send it out again to everyone, with fresh timers.
+          set((state) => ({
+            deliveries: patchDelivery(state.deliveries, deliveryId, (d) => ({
+              ...d,
+              declinedBy: [],
+              offerSeenAt: {},
+              history: [
+                ...d.history,
+                { status: "offered", at: Date.now(), by: "staff", note: note ?? "Sent out again by support" },
+              ],
+            })),
+          }));
+          return "ok";
+        }
+
+        // A rider has it (claimed, or on the way to the seller): take it off them
+        // and put it back out — but not to that same rider.
+        const previousRider = delivery.riderId;
+        set((state) => ({
+          deliveries: patchDelivery(state.deliveries, deliveryId, (d) => ({
+            ...withStatus(d, "offered", "staff", note ?? "Reassigned by support"),
+            riderId: null,
+            riderName: null,
+            declinedBy:
+              previousRider && !d.declinedBy.includes(previousRider)
+                ? [...d.declinedBy, previousRider]
+                : d.declinedBy,
+            offerSeenAt: {},
+          })),
+        }));
+        useOrdersStore.getState().applyDeliveryUpdate(delivery.orderGroupId, {
+          status: "ready_for_pickup",
+          label: "GRAPPlive support is finding another rider",
+          riderName: null,
+          etaMinutes: null,
+        });
+        return "ok";
+      },
+
+      staffCancel: (deliveryId, note) => {
+        if (!isStaffSession()) return "forbidden";
+        const delivery = get().deliveries.find((d) => d.id === deliveryId);
+        if (!delivery || !STAFF_CAN_INTERVENE.includes(delivery.status)) return "invalid";
+        set((state) => ({
+          deliveries: patchDelivery(state.deliveries, deliveryId, (d) =>
+            withStatus(d, "cancelled", "staff", note ?? "Cancelled by support")
+          ),
+        }));
+        restoreOrderBeforeDispatch(delivery.orderGroupId, "Delivery cancelled by GRAPPlive support");
+        return "ok";
+      },
+
+      staffConfirmParcelReceived: (deliveryId, note) => {
+        if (!isStaffSession()) return "forbidden";
+        const delivery = get().deliveries.find((d) => d.id === deliveryId);
+        if (!delivery || delivery.status !== "returned" || delivery.returnConfirmedAt !== undefined) {
+          return "invalid";
+        }
+        set((state) => ({
+          deliveries: patchDelivery(state.deliveries, deliveryId, (d) => ({
+            ...d,
+            returnConfirmedAt: Date.now(),
+            history: [
+              ...d.history,
+              { status: "returned", at: Date.now(), by: "staff", note: note ?? "Parcel confirmed back by support" },
+            ],
+          })),
+        }));
+        useOrdersStore.getState().applyDeliveryUpdate(delivery.orderGroupId, {
+          status: "ready_for_pickup",
+          label: "GRAPPlive support confirmed the parcel is back with the seller",
         });
         return "ok";
       },
@@ -565,7 +666,7 @@ export const useDeliveryStore = create<DeliveryState>()(
         // Back out to other riders — but not to this one again.
         set((state) => ({
           deliveries: patchDelivery(state.deliveries, deliveryId, (d) => ({
-            ...withStatus(d, "offered"),
+            ...withStatus(d, "offered", "rider"),
             riderId: null,
             riderName: null,
             declinedBy: d.declinedBy.includes(riderId) ? d.declinedBy : [...d.declinedBy, riderId],

@@ -36,6 +36,10 @@ export const CANCELLABLE_BY_SELLER: DeliveryStatus[] = [
   "at_pickup",
 ];
 
+// Support can step in on a delivery until the parcel is picked up: send it out
+// again, reassign it, or cancel it.
+export const STAFF_CAN_INTERVENE: DeliveryStatus[] = ["offered", "scheduled", "heading_to_pickup", "at_pickup"];
+
 // A rider can hand a job back until they have the parcel.
 export const RELEASABLE_BY_RIDER: DeliveryStatus[] = ["scheduled", "heading_to_pickup", "at_pickup"];
 
@@ -107,7 +111,15 @@ export const OFFER_SECONDS = 30;
 // Wrong OTP attempts allowed before the code is locked.
 export const OTP_MAX_ATTEMPTS = 5;
 
-export type DeliveryHistoryEntry = { status: DeliveryStatus; at: number };
+// Who made a change (AGENTS.md §33: every important event records its actor).
+export type DeliveryActor = "buyer" | "seller" | "rider" | "staff" | "system";
+
+export type DeliveryHistoryEntry = {
+  status: DeliveryStatus;
+  at: number;
+  by?: DeliveryActor; // absent on records made before actors were tracked
+  note?: string; // e.g. why support stepped in
+};
 
 // A buyer's rating of the rider, left once after the delivery is done.
 export type DeliveryRating = {
@@ -154,7 +166,7 @@ export type Delivery = {
   declinedBy: string[]; // rider ids who declined or let the offer expire
   offerSeenAt: Record<string, number>; // rider id -> when the offer was first shown
   failureReason?: FailureReason;
-  returnConfirmedAt?: number; // the seller confirmed the returned parcel arrived
+  returnConfirmedAt?: number; // the seller (or support) confirmed the returned parcel arrived
   rating?: DeliveryRating;
   createdAt: number;
   history: DeliveryHistoryEntry[];
