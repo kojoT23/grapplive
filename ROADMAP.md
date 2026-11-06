@@ -636,6 +636,37 @@ rule applies per stop (each failed stop pays half, each delivered stop pays in
 full) — built with scheduled delivery, next. *Not modeled:* who bears the cost
 of a failed trip (the customer or the seller) — needs real payments.
 
+**Scheduled delivery (the second delivery mode).** Left to the seller: on the
+product form (new + edit) a seller can switch on *Deliver on a day the buyer
+picks* (`CatalogProduct.scheduledDelivery`) for large or bulky items. If any
+item from a seller in the cart has it on, checkout makes the buyer choose a
+**day (from tomorrow, a week ahead) and a time window** (morning / afternoon /
+evening) for that seller's part of the order (`DeliveryDayPicker`); the product
+page says so up front. The day is saved on the order group
+(`deliverySlot`) and copied onto the delivery (`slot`); everything else —
+address, pin, OTP, cash on delivery, ratings — is unchanged. A scheduled
+delivery is **not** a live 30-second offer: riders see it under *Scheduled
+jobs you can claim* (`openScheduledFor`) and **claim** it ahead of time
+(`claimScheduled`, no need to be online, same cash-limit rule), which moves it
+to `scheduled` and the order to "rider assigned". Riders can claim **several
+stops for the same day**; on the day they **start one stop at a time**
+(`startScheduledStop`, only on the delivery day, only when no other delivery is
+active), after which it is an ordinary trip. A rider can hand a claimed job
+back and the seller can cancel it until it starts. **Pay is per stop** (a
+delivered stop pays the full fee, a failed one half — the same rules as
+single orders). The buyer's order page shows the delivery day and the booked
+rider; the delivery code and countdown ETA appear once the rider sets off. The
+seller's order list shows a "📅 Deliver …" line and the card shows scheduled
+states. Day/window helpers live in `lib/mock-data/deliverySlots.ts`.
+*Also fixed here:* checkout used to read the STATIC product fixtures, so a
+product a seller created or edited (price, the new switch) never reached it;
+it now reads the live catalog store. *Not built:* scheduled delivery on
+GrappStore (its items are all same-day), a seller setting the days they can
+deliver or a minimum lead time per product (it's always tomorrow onward),
+real route planning across a rider's stops (they see a list; routing needs the
+backend), a buyer changing the day after ordering, and a rider penalty for not
+turning up on the day.
+
 **The delivery side is feature-complete for the prototype.** What remains
 is backend work (real accounts, shared dispatch across devices, live
 tracking, real payouts/SMS), and the GrappStore staff role.
@@ -670,6 +701,9 @@ lower return at this stage:
 - `lib/store/useStoreProfileStore.test.ts` (added later, 8 tests) — the
   per-seller storefront profile: seeding, isolation between sellers, and
   the migration from the old single-seller shape.
+- `lib/store/useScheduledDelivery.test.ts` (24 tests) — delivery-day helpers
+  and scheduled delivery: claiming, several stops in a day, starting only on
+  the day and one at a time, per-stop pay, handing back and cancelling.
 - `lib/delivery/failedDeliveryPay.test.ts` (7 tests) — half-fee pay for
   failed deliveries: when it's earned, when it isn't, COD, and timing.
 - `lib/mock-data/deliveryFees.test.ts` (9 tests) — who pays by payment

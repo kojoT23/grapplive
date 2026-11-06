@@ -33,6 +33,7 @@ export type NewCatalogProductInput = {
   stockCount: number;
   status: ProductStatus;
   category: ProductCategory;
+  scheduledDelivery?: boolean;
   isResellerItem?: boolean;
   resellerMarkupGHS?: number;
   draftNote?: string;

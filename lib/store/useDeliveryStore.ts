@@ -20,6 +20,7 @@ import { useRiderStore } from "@/lib/store/useRiderStore";
 import { useCashLedgerStore, heldTotal } from "@/lib/store/useCashLedgerStore";
 import { CASH_HOLD_LIMIT_GHS } from "@/lib/mock-data/cash";
 import type { DeliveryPin } from "@/lib/mock-data/deliveryDetails";
+import { compareSlots, isSlotToday, slotLabel, type DeliverySlot } from "@/lib/mock-data/deliverySlots";
 import { getRiderByIdSync, useRiderIdentityStore } from "@/lib/store/useRiderIdentityStore";
 
 // The prototype's stand-in for the dispatch backend. Deliveries are shared
@@ -42,6 +43,7 @@ export type NewDeliveryInput = {
   digitalAddress?: string;
   landmark?: string;
   pin?: DeliveryPin;
+  slot?: DeliverySlot; // scheduled delivery: the day and window the buyer picked
   codAmountGHS: number;
   // The delivery fee (the rider's pay) when the order has one; otherwise the
   // mock trip estimate is used.
@@ -54,6 +56,7 @@ export type StepResult = "ok" | "invalid";
 export type CompleteResult = "ok" | "wrong_otp" | "locked" | "invalid";
 export type RateResult = "ok" | "invalid" | "already_rated" | "not_buyer";
 export type ReleaseResult = "ok" | "invalid";
+export type StartResult = "ok" | "invalid" | "busy" | "not_today";
 
 type DeliveryState = {
   deliveries: Delivery[];
@@ -83,6 +86,11 @@ type DeliveryState = {
   // The rider hands a job back before they have the parcel; it goes out to
   // other riders again.
   releaseJob: (deliveryId: string, riderId: string) => ReleaseResult;
+  // Scheduled delivery: a rider claims a job for its delivery day (no timer,
+  // no need to be online), then starts it on the day. Pay is per stop, so a
+  // rider with several claimed stops is paid for each one.
+  claimScheduled: (deliveryId: string, riderId: string) => AcceptResult;
+  startScheduledStop: (deliveryId: string, riderId: string, nowMs?: number) => StartResult;
 };
 
 // ---- Selectors (pure, so pages and tests can use them on any list) ----
@@ -102,14 +110,40 @@ export function activeDeliveryFor(deliveries: Delivery[], riderId: string): Deli
   return deliveries.find((d) => d.riderId === riderId && ACTIVE_DELIVERY_STATUSES.includes(d.status));
 }
 
-// Offers a rider can currently see: still open, in their area, and not
-// already declined (or expired) by them. Oldest first.
+// Same-day offers a rider can currently see: still open, in their area, and
+// not already declined (or expired) by them. Oldest first. Scheduled jobs
+// (those with a delivery day) are never offered like this — they're claimed.
 export function openOffersFor(deliveries: Delivery[], riderId: string, riderArea: string): Delivery[] {
   return deliveries
     .filter(
-      (d) => d.status === "offered" && d.pickupArea === riderArea && !d.declinedBy.includes(riderId)
+      (d) =>
+        d.status === "offered" &&
+        !d.slot &&
+        d.pickupArea === riderArea &&
+        !d.declinedBy.includes(riderId)
     )
     .sort((a, b) => a.createdAt - b.createdAt);
+}
+
+// Scheduled jobs a rider could claim: open, in their area, not handed back by
+// them. Earliest delivery day first.
+export function openScheduledFor(deliveries: Delivery[], riderId: string, riderArea: string): Delivery[] {
+  return deliveries
+    .filter(
+      (d) =>
+        d.status === "offered" &&
+        d.slot !== undefined &&
+        d.pickupArea === riderArea &&
+        !d.declinedBy.includes(riderId)
+    )
+    .sort((a, b) => compareSlots(a.slot!, b.slot!));
+}
+
+// Scheduled jobs a rider has claimed and not started yet, earliest first.
+export function claimedScheduledFor(deliveries: Delivery[], riderId: string): Delivery[] {
+  return deliveries
+    .filter((d) => d.status === "scheduled" && d.riderId === riderId && d.slot !== undefined)
+    .sort((a, b) => compareSlots(a.slot!, b.slot!));
 }
 
 export function historyFor(deliveries: Delivery[], riderId: string): Delivery[] {
@@ -174,6 +208,7 @@ export const useDeliveryStore = create<DeliveryState>()(
           digitalAddress: input.digitalAddress,
           landmark: input.landmark,
           pin: input.pin,
+          slot: input.slot,
           ...trip,
           feeGHS: input.feeGHS ?? trip.feeGHS,
           codAmountGHS: input.codAmountGHS,
@@ -239,7 +274,13 @@ export const useDeliveryStore = create<DeliveryState>()(
           return "cash_limit";
         }
         const delivery = deliveries.find((d) => d.id === deliveryId);
-        if (!delivery || delivery.status !== "offered" || delivery.declinedBy.includes(riderId)) {
+        // Scheduled jobs are claimed (claimScheduled), never accepted as a live offer.
+        if (
+          !delivery ||
+          delivery.status !== "offered" ||
+          delivery.slot ||
+          delivery.declinedBy.includes(riderId)
+        ) {
           return "gone";
         }
 
@@ -447,6 +488,67 @@ export const useDeliveryStore = create<DeliveryState>()(
           label: "Delivery request cancelled by the seller",
           riderName: null,
           etaMinutes: null,
+        });
+        return "ok";
+      },
+
+      claimScheduled: (deliveryId, riderId) => {
+        const rider = getRiderByIdSync(riderId);
+        if (!rider) return "unknown_rider";
+        // A claim is a promise to turn up, so the same unhanded-cash rule applies.
+        if (heldTotal(useCashLedgerStore.getState().entries, riderId) >= CASH_HOLD_LIMIT_GHS) {
+          return "cash_limit";
+        }
+
+        const delivery = get().deliveries.find((d) => d.id === deliveryId);
+        if (
+          !delivery ||
+          delivery.status !== "offered" ||
+          !delivery.slot ||
+          delivery.declinedBy.includes(riderId)
+        ) {
+          return "gone";
+        }
+
+        set((state) => ({
+          deliveries: patchDelivery(state.deliveries, deliveryId, (d) => ({
+            ...withStatus(d, "scheduled"),
+            riderId,
+            riderName: rider.name,
+          })),
+        }));
+        useOrdersStore.getState().applyDeliveryUpdate(delivery.orderGroupId, {
+          status: "rider_assigned",
+          label: `${rider.name} will deliver on ${slotLabel(delivery.slot)}`,
+          riderName: rider.name,
+          etaMinutes: null, // no countdown until the day
+        });
+        return "ok";
+      },
+
+      startScheduledStop: (deliveryId, riderId, nowMs = Date.now()) => {
+        const { deliveries } = get();
+        const delivery = deliveries.find((d) => d.id === deliveryId);
+        if (
+          !delivery ||
+          delivery.riderId !== riderId ||
+          delivery.status !== "scheduled" ||
+          !delivery.slot
+        ) {
+          return "invalid";
+        }
+        if (!isSlotToday(delivery.slot, nowMs)) return "not_today";
+        if (activeDeliveryFor(deliveries, riderId)) return "busy";
+
+        // From here it's an ordinary trip: pickup, drop-off, OTP. The ETA
+        // counts down from now, not from when it was claimed.
+        set((state) => ({
+          deliveries: patchDelivery(state.deliveries, deliveryId, (d) => withStatus(d, "heading_to_pickup")),
+        }));
+        useOrdersStore.getState().applyDeliveryUpdate(delivery.orderGroupId, {
+          status: "rider_assigned",
+          label: `${delivery.riderName} is on the way to the seller`,
+          etaMinutes: delivery.etaMinutes,
         });
         return "ok";
       },

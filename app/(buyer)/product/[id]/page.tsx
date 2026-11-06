@@ -191,6 +191,13 @@ export default function ProductPage() {
           )}
         </div>
 
+        {product.scheduledDelivery && (
+          <div className="text-[10px] text-gl-text-secondary mb-2.5 border border-gl-border rounded-lg px-2.5 py-1.5">
+            <span className="font-semibold text-gl-text">Scheduled delivery</span> — you pick the day at
+            checkout. This item isn&apos;t delivered same-day.
+          </div>
+        )}
+
         {product.returnPolicyDays ? (
           <div className="flex items-center gap-1 text-[10px] text-gl-text-secondary mb-2.5">
             <IconShieldCheck size={12} className="text-gl-green" />

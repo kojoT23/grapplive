@@ -5,9 +5,11 @@
 // arrived, ...) live here.
 
 import type { DeliveryPin } from "@/lib/mock-data/deliveryDetails";
+import type { DeliverySlot } from "@/lib/mock-data/deliverySlots";
 
 export type DeliveryStatus =
-  | "offered" // created, waiting for a rider to accept
+  | "offered" // created, waiting for a rider to accept (or, if it has a slot, to claim)
+  | "scheduled" // a rider claimed it for its delivery day; not started yet
   | "heading_to_pickup" // accepted; rider is going to the seller
   | "at_pickup" // rider has arrived at the seller
   | "out_for_delivery" // parcel picked up; rider is going to the customer
@@ -27,10 +29,15 @@ export const ACTIVE_DELIVERY_STATUSES: DeliveryStatus[] = [
 ];
 
 // The seller can call off a delivery up to the moment the parcel is picked up.
-export const CANCELLABLE_BY_SELLER: DeliveryStatus[] = ["offered", "heading_to_pickup", "at_pickup"];
+export const CANCELLABLE_BY_SELLER: DeliveryStatus[] = [
+  "offered",
+  "scheduled",
+  "heading_to_pickup",
+  "at_pickup",
+];
 
 // A rider can hand a job back until they have the parcel.
-export const RELEASABLE_BY_RIDER: DeliveryStatus[] = ["heading_to_pickup", "at_pickup"];
+export const RELEASABLE_BY_RIDER: DeliveryStatus[] = ["scheduled", "heading_to_pickup", "at_pickup"];
 
 // Failures that happen at the customer's door leave the rider holding the
 // parcel, so they must bring it back; a seller problem at pickup doesn't.
@@ -74,6 +81,7 @@ export const NEXT_STEP: Partial<
 
 export const deliveryStatusLabels: Record<DeliveryStatus, string> = {
   offered: "Waiting for a rider",
+  scheduled: "A rider is booked for your delivery day",
   heading_to_pickup: "Rider is heading to the seller",
   at_pickup: "Rider is at the seller",
   out_for_delivery: "On the way to you",
@@ -123,6 +131,10 @@ export type Delivery = {
   digitalAddress?: string;
   landmark?: string;
   pin?: DeliveryPin; // the buyer's shared location, if they shared one
+  // Set for scheduled delivery: the day and window the buyer picked. A delivery
+  // with a slot is claimed by a rider ahead of time (no 30-second offer) and
+  // started on the day.
+  slot?: DeliverySlot;
   pickupKm: number;
   dropoffKm: number;
   feeGHS: number;
@@ -170,7 +182,9 @@ export function estimateTrip(seed: string): {
 // accepted plus the estimated trip time. It is an ESTIMATE counted down on
 // the buyer's screen, not live tracking (that needs the backend).
 export function etaTarget(d: Delivery): number | null {
-  const acceptedAt = d.history.find((h) => h.status === "heading_to_pickup")?.at;
+  // The latest one: a job handed back and taken again, or a scheduled job
+  // started on its day, counts from when this rider set off.
+  const acceptedAt = [...d.history].reverse().find((h) => h.status === "heading_to_pickup")?.at;
   return acceptedAt === undefined ? null : acceptedAt + d.etaMinutes * 60_000;
 }
 

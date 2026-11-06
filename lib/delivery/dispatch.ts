@@ -40,6 +40,7 @@ export function requestDeliveryForGroup(groupId: string): void {
     digitalAddress: order.deliveryDetails?.digitalAddress,
     landmark: order.deliveryDetails?.landmark,
     pin: order.deliveryDetails?.pin,
+    slot: group.deliverySlot,
     // The delivery fee is the rider's pay; fixture orders without one fall
     // back to the mock trip estimate.
     feeGHS: group.deliveryFeeGHS,

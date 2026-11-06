@@ -9,6 +9,8 @@ import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
 import { useCurrentRider } from "@/lib/hooks/useCurrentRider";
 import { useSecondsUntil } from "@/lib/hooks/useSecondsUntil";
 import { riderTabs } from "@/lib/nav/rider-tabs";
+import { ScheduledJobs } from "@/components/rider/ScheduledJobs";
+import { useNow } from "@/lib/hooks/useNow";
 import { useRiderStore } from "@/lib/store/useRiderStore";
 import { useCashLedgerStore, heldTotal } from "@/lib/store/useCashLedgerStore";
 import { CASH_HOLD_LIMIT_GHS } from "@/lib/mock-data/cash";
@@ -113,6 +115,7 @@ export default function RiderJobsPage() {
   const online = useRiderStore((s) => (rider ? s.onlineByRider[rider.id] === true : false));
   const setOnline = useRiderStore((s) => s.setOnline);
   const restoreOffer = useDeliveryStore((s) => s.restoreOffer);
+  const now = useNow();
 
   if (isChecking || !riderHydrated || !deliveriesHydrated || !statusHydrated || !ledgerHydrated) {
     return (
@@ -145,7 +148,8 @@ export default function RiderJobsPage() {
   const heldCash = heldTotal(cashEntries, rider.id);
 
   // Why there's nothing to show — so an empty screen is never a mystery.
-  const allOpen = deliveries.filter((d) => d.status === "offered");
+  // Same-day requests only; scheduled jobs have their own list below.
+  const allOpen = deliveries.filter((d) => d.status === "offered" && !d.slot);
   const skippedByMe = allOpen.filter(
     (d) => d.pickupArea === rider.area && d.declinedBy.includes(rider.id)
   );
@@ -274,6 +278,14 @@ export default function RiderJobsPage() {
           )}
         </div>
       )}
+
+      <ScheduledJobs
+        riderId={rider.id}
+        riderArea={rider.area}
+        deliveries={deliveries}
+        nowMs={now}
+        hasActive={Boolean(active)}
+      />
 
       <TabBar tabs={riderTabs} activeHref="/rider" />
     </div>

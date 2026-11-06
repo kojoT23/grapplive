@@ -8,9 +8,12 @@ import { useDeliveryDetailsForm } from "@/lib/hooks/useDeliveryDetailsForm";
 import { DeliveryDetailsForm } from "@/components/checkout/DeliveryDetailsForm";
 import { useLocationStore } from "@/lib/store/useLocationStore";
 import { useOrdersStore, type NewOrderGroupInput } from "@/lib/store/useOrdersStore";
-import { getProductById } from "@/lib/mock-data/catalog";
+import { useCatalogStore } from "@/lib/store/useCatalogStore";
+import type { CatalogProduct } from "@/lib/mock-data/catalog";
 import type { PaymentMethod } from "@/lib/mock-data/orders";
 import { deliveryFeeFor } from "@/lib/mock-data/deliveryFees";
+import { useNow } from "@/lib/hooks/useNow";
+import { DeliveryDayPicker, completeSlot, type PartialSlot } from "@/components/checkout/DeliveryDayPicker";
 
 const INSTANT_CONFIRM_FEE_GHS = 2;
 
@@ -28,20 +31,35 @@ export default function CheckoutPage() {
 
   const detailsForm = useDeliveryDetailsForm();
   const areaName = useLocationStore((s) => s.areaName);
+  // Scheduled delivery: the day/window the buyer picks, per seller.
+  const now = useNow();
+  const [slots, setSlots] = useState<Record<string, PartialSlot>>({});
+  const [slotErrors, setSlotErrors] = useState<Record<string, boolean>>({});
 
   // Resolved once, reused both for the on-screen summary and for building
   // the OrderGroups on submit — one source of truth instead of two
   // separate derivations of the same cart.
+  // Products come from the live catalog (what sellers have created and edited —
+  // prices, stock, scheduled-delivery switch), not the static fixtures, so
+  // what's charged here matches what the buyer saw and the seller set.
+  const catalogProducts = useCatalogStore((s) => s.products);
+  const catalogHasHydrated = useCatalogStore((s) => s.hasHydrated);
   const lineItems = items
     .map((item) => {
-      const product = getProductById(item.productId);
+      const product = catalogProducts.find((p) => p.id === item.productId);
       return product ? { item, product } : null;
     })
-    .filter((row): row is { item: (typeof items)[number]; product: NonNullable<ReturnType<typeof getProductById>> } =>
-      Boolean(row)
-    );
+    .filter((row): row is { item: (typeof items)[number]; product: CatalogProduct } => Boolean(row));
 
   const subtotal = lineItems.reduce((sum, { item, product }) => sum + product.priceGHS * item.quantity, 0);
+
+  if (!catalogHasHydrated) {
+    return (
+      <div className="flex items-center justify-center min-h-dvh">
+        <div className="text-[12px] text-gl-text-secondary">Loading…</div>
+      </div>
+    );
+  }
 
   if (subtotal === 0) {
     return (
@@ -79,7 +97,7 @@ export default function CheckoutPage() {
   // seller before paying, which also previews the same split the order
   // will actually settle into.
   const groupedForDisplay = lineItems.reduce<
-    Record<string, { sellerName: string; rows: { item: (typeof items)[number]; product: NonNullable<ReturnType<typeof getProductById>> }[] }>
+    Record<string, { sellerName: string; rows: { item: (typeof items)[number]; product: CatalogProduct }[] }>
   >((acc, row) => {
     const key = row.product.sellerId;
     if (!acc[key]) acc[key] = { sellerName: row.product.sellerName, rows: [] };
@@ -87,9 +105,17 @@ export default function CheckoutPage() {
     return acc;
   }, {});
 
+  // Sellers who switched scheduled delivery on for something in this cart: the
+  // whole delivery from that seller then happens on a day the buyer picks.
+  const scheduledSellers = Object.entries(groupedForDisplay).filter(([, group]) =>
+    group.rows.some(({ product }) => product.scheduledDelivery)
+  );
+
   const handlePlaceOrder = () => {
     const cleanDetails = detailsForm.submit();
-    if (!cleanDetails) return;
+    const missing = scheduledSellers.filter(([sellerId]) => !completeSlot(slots[sellerId]));
+    setSlotErrors(Object.fromEntries(missing.map(([sellerId]) => [sellerId, true])));
+    if (!cleanDetails || missing.length > 0) return;
 
     setIsPlacingOrder(true);
     setTimeout(() => {
@@ -118,6 +144,12 @@ export default function CheckoutPage() {
         }
       });
 
+      // Attach the chosen delivery day to the sellers that need one.
+      groupsBySeller.forEach((group, sellerId) => {
+        const slot = scheduledSellers.some(([id]) => id === sellerId) ? completeSlot(slots[sellerId]) : undefined;
+        if (slot) group.deliverySlot = slot;
+      });
+
       placeOrder(Array.from(groupsBySeller.values()), cleanDetails);
       clearCart();
       router.push("/checkout/confirmation");
@@ -134,6 +166,20 @@ export default function CheckoutPage() {
       </div>
 
       <DeliveryDetailsForm form={detailsForm} />
+
+      {scheduledSellers.map(([sellerId, group]) => (
+        <DeliveryDayPicker
+          key={sellerId}
+          sellerName={group.sellerName}
+          value={slots[sellerId] ?? {}}
+          nowMs={now}
+          error={slotErrors[sellerId]}
+          onChange={(next) => {
+            setSlots((prev) => ({ ...prev, [sellerId]: next }));
+            setSlotErrors((prev) => ({ ...prev, [sellerId]: false }));
+          }}
+        />
+      ))}
 
       {/* Real item list before payment, grouped by seller so a multi-seller
           cart is legible — this is the moment someone commits real MoMo

@@ -10,6 +10,7 @@ import {
   type PaymentMethod,
 } from "@/lib/mock-data/orders";
 import type { DeliveryDetails } from "@/lib/mock-data/deliveryDetails";
+import type { DeliverySlot } from "@/lib/mock-data/deliverySlots";
 import { useAppStore } from "@/lib/store/useAppStore";
 import { useLocationStore } from "@/lib/store/useLocationStore";
 import { deliveryFeeFor } from "@/lib/mock-data/deliveryFees";
@@ -30,6 +31,7 @@ export type NewOrderGroupInput = {
   sellerName: string;
   items: OrderItem[];
   paymentMethod: PaymentMethod;
+  deliverySlot?: DeliverySlot; // the day the buyer picked, for scheduled delivery
 };
 
 type OrdersState = {
@@ -132,6 +134,7 @@ export const useOrdersStore = create<OrdersState>()(
               status: initialStatus,
               deliveryFeeGHS: fee.feeGHS,
               deliveryFeeChargedGHS: fee.chargedToBuyerGHS,
+              deliverySlot: input.deliverySlot,
               buyerNote: input.paymentMethod === "direct_momo" ? "Payment sent — awaiting confirmation" : undefined,
               history: [{ status: initialStatus, label: initialLabel, timestamp: nowLabel() }],
             };

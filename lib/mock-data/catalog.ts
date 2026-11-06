@@ -75,6 +75,9 @@ export type CatalogProduct = {
   stockCount?: number;
   colorVariants?: ProductColorVariant[];
   status: ProductStatus;
+  // Seller opted this product (a large or bulky item) into scheduled
+  // delivery: the buyer picks a delivery day instead of getting a same-day rider.
+  scheduledDelivery?: boolean;
   isResellerItem?: boolean;
   resellerMarkupGHS?: number;
   draftNote?: string; // e.g. "Needs 2 more photos"

@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { FlatOrderGroup } from "@/lib/mock-data/orders";
 import { groupTotal } from "@/lib/mock-data/orders";
 import { useDeliveryStore } from "@/lib/store/useDeliveryStore";
+import { slotLabel } from "@/lib/mock-data/deliverySlots";
 import {
   ACTIVE_DELIVERY_STATUSES,
   CANCELLABLE_BY_SELLER,
@@ -62,6 +63,13 @@ export function DeliveryOrderCard({
 
   let heading = "WAITING FOR A RIDER";
   let detail = delivery ? `Your request is with riders in ${delivery.pickupArea}.` : "Delivery requested.";
+  if (delivery?.slot && status === "offered") {
+    heading = "WAITING FOR A RIDER TO CLAIM IT";
+    detail = `Scheduled for ${slotLabel(delivery.slot)}. Riders in ${delivery.pickupArea} can claim it ahead of time.`;
+  } else if (status === "scheduled" && delivery?.slot) {
+    heading = "SCHEDULED";
+    detail = `${delivery.riderName} will deliver on ${slotLabel(delivery.slot)}. Have it ready for pickup that day.`;
+  }
   if (returning && delivery) {
     heading = "PARCEL BEING RETURNED";
     detail = `${delivery.riderName} is bringing it back${
@@ -73,7 +81,7 @@ export function DeliveryOrderCard({
   } else if (needsRetry && delivery) {
     heading = "DELIVERY FAILED";
     detail = `${delivery.failureReason ? failureReasonLabels[delivery.failureReason] : "The attempt failed"}. You can request a rider again.`;
-  } else if (inProgress && delivery) {
+  } else if (inProgress && delivery && status !== "scheduled") {
     heading = group.status === "out_for_delivery" ? "OUT FOR DELIVERY" : "RIDER ASSIGNED";
     detail = `${delivery.riderName} · ${deliveryStatusLabels[delivery.status]}`;
   }

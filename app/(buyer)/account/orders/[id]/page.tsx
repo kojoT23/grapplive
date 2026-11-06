@@ -16,6 +16,7 @@ import {
   type Delivery,
 } from "@/lib/mock-data/deliveries";
 import { useNow } from "@/lib/hooks/useNow";
+import { slotLabel } from "@/lib/mock-data/deliverySlots";
 import { useAppStore } from "@/lib/store/useAppStore";
 
 const ALL_STEPS: { status: OrderStatus; fallbackLabel: string }[] = [
@@ -228,6 +229,18 @@ export default function BuyerOrderDetailPage() {
             Total: GHS {groupPayable(group).toLocaleString("en-GH")}
           </div>
         </div>
+
+        {group.deliverySlot && group.status !== "delivered" && group.status !== "cancelled" && (
+          <div className="border border-gl-border rounded-lg p-3 mb-4">
+            <div className="text-[10px] font-semibold text-gl-text mb-0.5">DELIVERY DAY</div>
+            <div className="text-[11px] text-gl-text">{slotLabel(group.deliverySlot)}</div>
+            {delivery?.status === "scheduled" && delivery.riderName && (
+              <div className="text-[10px] text-gl-text-secondary mt-0.5">
+                {delivery.riderName} is booked to deliver it. You&apos;ll get your delivery code once they set off.
+              </div>
+            )}
+          </div>
+        )}
 
         {deliveryDetails && (
           <div className="border border-gl-border rounded-lg p-3 mb-4">

@@ -1,4 +1,5 @@
 import type { DeliveryDetails } from "@/lib/mock-data/deliveryDetails";
+import type { DeliverySlot } from "@/lib/mock-data/deliverySlots";
 
 // "instant_confirm" (marketplace) and "grapplive_fulfilled" (GrappStore)
 // used to share the same value. They mean different things in practice:
@@ -69,6 +70,9 @@ export type OrderGroup = {
   // predate delivery fees.
   deliveryFeeGHS?: number;
   deliveryFeeChargedGHS?: number;
+  // Present when the buyer picked a delivery day (scheduled delivery); absent
+  // for ordinary same-day (on-demand) delivery.
+  deliverySlot?: DeliverySlot;
   history: OrderHistoryEntry[];
 };
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { ScheduledDeliveryToggle } from "@/components/products/ScheduledDeliveryToggle";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { IconArrowLeft } from "@tabler/icons-react";
@@ -40,6 +41,7 @@ export default function NewProductPage() {
   const [stock, setStock] = useState("");
   const [status, setStatus] = useState<ProductStatus>("draft");
   const [category, setCategory] = useState<ProductCategory>("fashion");
+  const [scheduledDelivery, setScheduledDelivery] = useState(false);
   const [images, setImages] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -62,6 +64,7 @@ export default function NewProductPage() {
       stockCount: Number(stock),
       status,
       category,
+      scheduledDelivery: scheduledDelivery || undefined,
       images: images.length > 0 ? images : undefined,
     });
     router.push(`/products/${id}`);
@@ -145,6 +148,8 @@ export default function NewProductPage() {
           ))}
         </select>
       </label>
+
+      <ScheduledDeliveryToggle value={scheduledDelivery} onChange={setScheduledDelivery} />
 
       <button
         onClick={handleSave}

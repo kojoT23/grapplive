@@ -8,6 +8,7 @@ import { useOrdersStore } from "@/lib/store/useOrdersStore";
 import { useDeliveryStore, latestDeliveryForGroup } from "@/lib/store/useDeliveryStore";
 import { DeliveryOrderCard, CancelledOrderCard, isRiderManaged } from "@/components/orders/DeliveryOrderCard";
 import { deliveryNeedsSeller } from "@/lib/mock-data/deliveries";
+import { slotLabel } from "@/lib/mock-data/deliverySlots";
 import { requestDeliveryForGroup } from "@/lib/delivery/dispatch";
 import { CashToConfirm } from "@/components/orders/CashToConfirm";
 import { sellerTabs } from "@/lib/nav/seller-tabs";
@@ -248,14 +249,20 @@ export default function OrdersPage() {
         </div>
       ) : (
         filteredGroups.map((group) => (
-          <OrderCard
-            key={group.id}
-            group={group}
-            justUpdated={group.id === recentlyUpdatedId}
-            onConfirmPayment={(id) => flashThenRun(id, confirmPayment)}
-            onRequestDelivery={(id) => flashThenRun(id, requestDeliveryForGroup)}
-            onMarkDelivered={(id) => flashThenRun(id, markDelivered)}
-          />
+          <div key={group.id}>
+            {group.deliverySlot && group.status !== "delivered" && group.status !== "cancelled" && (
+              <div className="mx-3 md:mx-5 mb-1 text-[10px] font-semibold text-gl-brand">
+                📅 Deliver {slotLabel(group.deliverySlot)}
+              </div>
+            )}
+            <OrderCard
+              group={group}
+              justUpdated={group.id === recentlyUpdatedId}
+              onConfirmPayment={(id) => flashThenRun(id, confirmPayment)}
+              onRequestDelivery={(id) => flashThenRun(id, requestDeliveryForGroup)}
+              onMarkDelivered={(id) => flashThenRun(id, markDelivered)}
+            />
+          </div>
         ))
       )}
 
