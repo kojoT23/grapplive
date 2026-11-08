@@ -13,6 +13,8 @@ import { cashAttention, deliveryAttention, opsSummary } from "@/lib/delivery/ops
 import { DeliveriesBoard } from "@/components/ops/DeliveriesBoard";
 import { CashBoard } from "@/components/ops/CashBoard";
 import { RidersBoard } from "@/components/ops/RidersBoard";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { STAFF_RECIPIENT } from "@/lib/mock-data/notifications";
 
 type Tab = "deliveries" | "cash" | "riders";
 
@@ -66,6 +68,7 @@ export default function GrappStoreOpsPage() {
         <Link href="/grappstore/fulfillment" className="text-[11px] font-semibold text-gl-brand active:opacity-60">
           Fulfillment
         </Link>
+        <NotificationBell recipient={STAFF_RECIPIENT} href="/grappstore/ops/notifications" />
       </div>
 
       <div className="mx-3 md:mx-5 mb-3 grid grid-cols-4 gap-2">

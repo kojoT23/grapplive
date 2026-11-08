@@ -10,6 +10,8 @@ import { useCurrentRider } from "@/lib/hooks/useCurrentRider";
 import { useSecondsUntil } from "@/lib/hooks/useSecondsUntil";
 import { riderTabs } from "@/lib/nav/rider-tabs";
 import { ScheduledJobs } from "@/components/rider/ScheduledJobs";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { riderRecipient } from "@/lib/mock-data/notifications";
 import { useNow } from "@/lib/hooks/useNow";
 import { useRiderStore } from "@/lib/store/useRiderStore";
 import { useCashLedgerStore, heldTotal } from "@/lib/store/useCashLedgerStore";
@@ -160,9 +162,12 @@ export default function RiderJobsPage() {
 
   return (
     <div className="pb-16">
-      <div className="px-3 md:px-5 pt-3.5 pb-2">
-        <div className="text-[13px] text-gl-text-secondary">Rider</div>
-        <div className="text-[15px] font-semibold text-gl-text">{rider.name}</div>
+      <div className="px-3 md:px-5 pt-3.5 pb-2 flex items-start justify-between">
+        <div>
+          <div className="text-[13px] text-gl-text-secondary">Rider</div>
+          <div className="text-[15px] font-semibold text-gl-text">{rider.name}</div>
+        </div>
+        <NotificationBell recipient={riderRecipient(rider.id)} />
       </div>
 
       <div className="mx-3 md:mx-5 mb-3 flex items-center justify-between border border-gl-border rounded-lg px-3 py-2.5">

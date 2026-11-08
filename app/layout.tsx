@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AuthPromptModal } from "@/components/ui/AuthPromptModal";
+import { NotificationWiring } from "@/components/notifications/NotificationWiring";
 
 export const metadata: Metadata = {
   title: "GRAPPlive",
@@ -23,6 +24,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <div className="max-w-[480px] md:max-w-[720px] mx-auto min-h-dvh bg-white relative">
           {children}
           <AuthPromptModal />
+          <NotificationWiring />
         </div>
       </body>
     </html>

@@ -6,6 +6,9 @@ import { TabBar } from "@/components/ui/TabBar";
 import { useRequireAuth } from "@/lib/hooks/useRequireAuth";
 import { useDashboardSummary } from "@/lib/hooks/useDashboardSummary";
 import { sellerTabs } from "@/lib/nav/seller-tabs";
+import { useCurrentSellerId } from "@/lib/hooks/useCurrentSellerId";
+import { sellerRecipient } from "@/lib/mock-data/notifications";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 function formatGHS(amount: number) {
   return `GHS ${amount.toLocaleString("en-GH")}`;
@@ -14,6 +17,7 @@ function formatGHS(amount: number) {
 export default function DashboardPage() {
   const { isChecking } = useRequireAuth("sell");
   const { data, isLoading } = useDashboardSummary();
+  const sellerId = useCurrentSellerId();
 
   if (isChecking || isLoading || !data) {
     return (
@@ -28,9 +32,12 @@ export default function DashboardPage() {
 
   return (
     <div className="pb-16">
-      <div className="px-3 md:px-5 pt-3.5 pb-1">
-        <div className="text-[13px] text-gl-text-secondary">Good morning</div>
-        <div className="text-[15px] font-semibold text-gl-text">{summary.businessName}</div>
+      <div className="px-3 md:px-5 pt-3.5 pb-1 flex items-start justify-between">
+        <div>
+          <div className="text-[13px] text-gl-text-secondary">Good morning</div>
+          <div className="text-[15px] font-semibold text-gl-text">{summary.businessName}</div>
+        </div>
+        <NotificationBell recipient={sellerRecipient(sellerId)} />
       </div>
 
       {hasAttentionItems ? (

@@ -6,6 +6,7 @@ import { buyerTabs } from "@/lib/nav/buyer-tabs";
 import { spotlightSellers, liveSessions, categories } from "@/lib/mock-data/home";
 import { catalogProducts } from "@/lib/mock-data/catalog";
 import { HomeLocationButton } from "./HomeLocationButton";
+import { HomeNotificationBell } from "./HomeNotificationBell";
 
 export default function HomePage() {
   return (
@@ -19,6 +20,7 @@ export default function HomePage() {
           Search GRAPPlive
         </Link>
         <HomeLocationButton />
+        <HomeNotificationBell />
       </div>
 
       <p className="px-3 md:px-5 pb-1 pt-1 text-[12px] text-gl-text">

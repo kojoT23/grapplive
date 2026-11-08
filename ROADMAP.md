@@ -714,6 +714,44 @@ sellers, products, refunds, commissions, analytics).
 
 ---
 
+## 13. Notifications
+
+An in-app inbox for everyone, with a **bell** and unread count: on the buyer's
+Home, the seller's Dashboard, the rider's Jobs screen and the staff Ops hub
+(`/notifications` shows the inbox for the role you're using; staff have
+`/grappstore/ops/notifications`). Tapping a notification marks it read and
+opens the screen it's about; *Mark all read* clears them. Each person's inbox
+is separate — recipients are keys (`buyer:<phone>`, `seller:<id>`,
+`rider:<id>`, `staff`), so one phone in three roles has three inboxes, GrappStore's
+orders and cash go to staff, and only the owner can mark theirs read. At most 100
+are kept per person (`MAX_PER_RECIPIENT`).
+
+How it works: instead of calling notify() from every action, ONE watcher
+(`lib/notifications/wire.ts`, started once from the root layout by
+`NotificationWiring`) watches the order, delivery, cash and rider stores and
+tells the people a change concerns. That makes "who is told what" readable in one
+file and catches every path, including staff actions. It ignores the initial load
+from storage, so opening the app never replays old history. Who is told:
+- **New delivery request** -> online, active riders in the pickup area (a
+  scheduled job -> every active rider in the area); not riders who declined or
+  were just taken off it.
+- **Rider accepts / booked / sets off / arrives / delivers** -> buyer and seller
+  (and the rider gets "Delivery complete — you earned GHS x").
+- **Failed attempt, parcel returned / confirmed back, cancelled, handed back,
+  reassigned by support** -> buyer, seller and the rider, as affected.
+- **New order / payment confirmed / buyer cancels** -> seller (GrappStore: staff) /
+  buyer.
+- **Cash collected, handed over, settled, disputed, resolved, cash limit hit,
+  rider held liable** -> rider, seller and staff, as affected.
+- **Suspended / reinstated, new rating** -> the rider.
+*Not built:* SMS / WhatsApp / push (the same watcher is where those would hang
+once there's a backend — an in-app inbox only helps someone who has the app
+open); reminders by the clock ("your scheduled delivery is tomorrow") — they need
+something running on a timer; notification preferences / mute; grouping noisy
+bursts; deleting a notification.
+
+---
+
 ## 10. Test coverage
 
 ### 10.1 ✅ Resolved — zero automated tests existed until this pass
@@ -742,6 +780,9 @@ lower return at this stage:
 - `lib/store/useStoreProfileStore.test.ts` (added later, 8 tests) — the
   per-seller storefront profile: seeding, isolation between sellers, and
   the migration from the old single-seller shape.
+- `lib/notifications/wire.test.ts` (22 tests) — the inbox (separate per
+  person, read marking, the cap) and the watcher: who is told at each step of an
+  order, a delivery, a scheduled job, a failure, support actions and cash.
 - `lib/delivery/staffOps.test.ts` (24 tests) — the stuck-delivery rules, the
   who-did-what timeline, staff reassign / cancel / confirm, cash dispute
   resolution, rider suspension and the overview counts.
