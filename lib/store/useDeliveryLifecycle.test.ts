@@ -192,10 +192,7 @@ describe("delivery lifecycle: cancelling, returns and disputes", () => {
       expect(group().history[group().history.length - 1].label).toMatch(/cancelled by the buyer/i);
     });
 
-    it("is refused for paid orders (they need a refund), once dispatched, and for other people", () => {
-      useOrdersStore.setState({ orders: [order("instant_confirm")] });
-      expect(useOrdersStore.getState().cancelByBuyer(G, BUYER)).toBe("not_cancellable");
-
+    it("is refused once a rider has been requested, and for other people", () => {
       useOrdersStore.setState({ orders: [order("cash_on_delivery")] });
       expect(useOrdersStore.getState().cancelByBuyer(G, "+233500000000")).toBe("not_buyer");
 

@@ -9,14 +9,17 @@ import { useDeliveryStore } from "@/lib/store/useDeliveryStore";
 import { useCashLedgerStore } from "@/lib/store/useCashLedgerStore";
 import { useRiderIdentityStore } from "@/lib/store/useRiderIdentityStore";
 import { useRiderStore } from "@/lib/store/useRiderStore";
-import { cashAttention, deliveryAttention, opsSummary } from "@/lib/delivery/ops";
+import { cashAttention, deliveryAttention, disputeAttention, opsSummary, refundAttention } from "@/lib/delivery/ops";
+import { useDisputesStore } from "@/lib/store/useDisputesStore";
+import { useRefundsStore } from "@/lib/store/useRefundsStore";
+import { DisputesBoard } from "@/components/ops/DisputesBoard";
 import { DeliveriesBoard } from "@/components/ops/DeliveriesBoard";
 import { CashBoard } from "@/components/ops/CashBoard";
 import { RidersBoard } from "@/components/ops/RidersBoard";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { STAFF_RECIPIENT } from "@/lib/mock-data/notifications";
 
-type Tab = "deliveries" | "cash" | "riders";
+type Tab = "deliveries" | "cash" | "disputes" | "riders";
 
 // GRAPPlive staff's view across every seller and rider: which deliveries and
 // cash trails are stuck, what happened on a delivery and who did it, and the
@@ -28,12 +31,16 @@ export default function GrappStoreOpsPage() {
   const deliveriesHydrated = useDeliveryStore((s) => s.hasHydrated);
   const entries = useCashLedgerStore((s) => s.entries);
   const ledgerHydrated = useCashLedgerStore((s) => s.hasHydrated);
+  const disputes = useDisputesStore((s) => s.disputes);
+  const disputesHydrated = useDisputesStore((s) => s.hasHydrated);
+  const refunds = useRefundsStore((s) => s.refunds);
+  const refundsHydrated = useRefundsStore((s) => s.hasHydrated);
   const ridersHydrated = useRiderIdentityStore((s) => s.hasHydrated);
   const statusHydrated = useRiderStore((s) => s.hasHydrated);
   const now = useNow();
   const [tab, setTab] = useState<Tab>("deliveries");
 
-  if (isChecking || !deliveriesHydrated || !ledgerHydrated || !ridersHydrated || !statusHydrated) {
+  if (isChecking || !deliveriesHydrated || !ledgerHydrated || !ridersHydrated || !statusHydrated || !disputesHydrated || !refundsHydrated) {
     return (
       <div className="flex items-center justify-center min-h-dvh">
         <div className="text-[12px] text-gl-text-secondary">Loading…</div>
@@ -44,9 +51,12 @@ export default function GrappStoreOpsPage() {
   const summary = opsSummary(deliveries, entries, now);
   const deliveryAttentionCount = deliveries.filter((d) => deliveryAttention(d, now).length > 0).length;
   const cashAttentionCount = entries.filter((e) => cashAttention(e, now).length > 0).length;
+  const disputeAttentionCount =
+    disputes.filter((d) => disputeAttention(d, now).length > 0).length +
+    refunds.filter((r) => refundAttention(r, now).length > 0).length;
 
   const tiles = [
-    { label: "Needs attention", value: summary.needAttention, warn: summary.needAttention > 0 },
+    { label: "Needs attention", value: summary.needAttention + disputeAttentionCount, warn: summary.needAttention + disputeAttentionCount > 0 },
     { label: "Open requests", value: summary.openRequests },
     { label: "In progress", value: summary.inProgress },
     { label: "Scheduled", value: summary.scheduled },
@@ -55,6 +65,7 @@ export default function GrappStoreOpsPage() {
   const tabs: { value: Tab; label: string; count?: number }[] = [
     { value: "deliveries", label: "Deliveries", count: deliveryAttentionCount },
     { value: "cash", label: "Cash", count: cashAttentionCount },
+    { value: "disputes", label: "Disputes", count: disputeAttentionCount },
     { value: "riders", label: "Riders" },
   ];
 
@@ -107,6 +118,7 @@ export default function GrappStoreOpsPage() {
 
       {tab === "deliveries" && <DeliveriesBoard />}
       {tab === "cash" && <CashBoard />}
+      {tab === "disputes" && <DisputesBoard />}
       {tab === "riders" && <RidersBoard />}
     </div>
   );

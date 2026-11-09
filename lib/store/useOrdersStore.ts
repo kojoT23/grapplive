@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { safeJSONStorage } from "@/lib/utils/safe-storage";
 import {
+  groupPayable,
   initialOrders,
   type Order,
   type OrderGroup,
@@ -11,7 +12,8 @@ import {
 } from "@/lib/mock-data/orders";
 import type { DeliveryDetails } from "@/lib/mock-data/deliveryDetails";
 import type { DeliverySlot } from "@/lib/mock-data/deliverySlots";
-import { useAppStore } from "@/lib/store/useAppStore";
+import { useAppStore, isStaffSession } from "@/lib/store/useAppStore";
+import { useRefundsStore } from "@/lib/store/useRefundsStore";
 import { useLocationStore } from "@/lib/store/useLocationStore";
 import { deliveryFeeFor } from "@/lib/mock-data/deliveryFees";
 
@@ -24,7 +26,10 @@ export type DeliveryUpdate = {
   etaMinutes?: number | null;
 };
 
-export type CancelResult = "ok" | "invalid" | "not_buyer" | "not_cancellable";
+export type CancelResult = "ok" | "invalid" | "not_buyer" | "not_seller" | "not_cancellable";
+
+// An order can only be called off before a rider is requested.
+const PRE_DISPATCH: OrderStatus[] = ["awaiting_confirmation", "ready_to_pack", "preparing"];
 
 export type NewOrderGroupInput = {
   sellerId: string;
@@ -45,10 +50,13 @@ type OrdersState = {
   // (lib/delivery/dispatch.ts), which is what callers should use.
   requestDelivery: (groupId: string) => void;
   applyDeliveryUpdate: (groupId: string, update: DeliveryUpdate) => void;
-  // The buyer calls off an order that hasn't been dispatched yet. Only cash on
-  // delivery orders (nothing paid yet) can be cancelled this way — a paid order
-  // needs a refund, which has to go through the seller until real payments exist.
+  // The buyer calls off an order that hasn't been dispatched yet. A paid order
+  // (anything but cash on delivery) creates a refund owed to the buyer.
   cancelByBuyer: (groupId: string, buyerPhone: string) => CancelResult;
+  // The seller (or, for GrappStore, staff) calls off an order they can't or
+  // won't fulfil, with a reason. A paid order creates a refund. Only before a
+  // rider is requested — cancel the delivery first if one is open.
+  cancelBySeller: (groupId: string, sellerId: string, reason: string) => CancelResult;
   markDelivered: (groupId: string) => void;
 };
 
@@ -96,6 +104,23 @@ function updateGroup(
     ...order,
     groups: order.groups.map((g) => (g.id === groupId ? updater(g) : g)),
   }));
+}
+
+// A cancelled order that was already paid for owes the buyer a refund (the
+// items plus any delivery fee they were charged). Cash on delivery: nothing was
+// paid, so nothing to refund.
+function refundIfPaid(order: Order, group: OrderGroup, source: "buyer_cancelled" | "seller_cancelled", reason: string) {
+  if (group.paymentMethod === "cash_on_delivery" || !order.buyerPhone) return;
+  useRefundsStore.getState().createRefund({
+    orderGroupId: group.id,
+    buyerPhone: order.buyerPhone,
+    sellerId: group.sellerId,
+    sellerName: group.sellerName,
+    paymentMethod: group.paymentMethod,
+    amountGHS: groupPayable(group),
+    source,
+    reason,
+  });
 }
 
 export const useOrdersStore = create<OrdersState>()(
@@ -169,10 +194,7 @@ export const useOrdersStore = create<OrdersState>()(
         const group = order?.groups.find((g) => g.id === groupId);
         if (!order || !group) return "invalid";
         if (order.buyerPhone && order.buyerPhone !== buyerPhone) return "not_buyer";
-        const cancellable =
-          group.paymentMethod === "cash_on_delivery" &&
-          (group.status === "ready_to_pack" || group.status === "preparing");
-        if (!cancellable) return "not_cancellable";
+        if (!PRE_DISPATCH.includes(group.status)) return "not_cancellable";
 
         set((state) => ({
           orders: updateGroup(state.orders, groupId, (g) => ({
@@ -181,6 +203,33 @@ export const useOrdersStore = create<OrdersState>()(
             history: [...g.history, { status: "cancelled", label: "Cancelled by the buyer", timestamp: nowLabel() }],
           })),
         }));
+        refundIfPaid(order, group, "buyer_cancelled", "Cancelled by the buyer");
+        return "ok";
+      },
+
+      cancelBySeller: (groupId, sellerId, reason) => {
+        const order = get().orders.find((o) => o.groups.some((g) => g.id === groupId));
+        const group = order?.groups.find((g) => g.id === groupId);
+        if (!order || !group) return "invalid";
+        // GrappStore has no seller account: only staff may cancel its orders.
+        const mayAct =
+          group.sellerId === sellerId &&
+          (sellerId !== "grapplive-official" || isStaffSession());
+        if (!mayAct) return "not_seller";
+        if (!PRE_DISPATCH.includes(group.status)) return "not_cancellable";
+
+        const why = reason.trim() || "No reason given";
+        set((state) => ({
+          orders: updateGroup(state.orders, groupId, (g) => ({
+            ...g,
+            status: "cancelled",
+            history: [
+              ...g.history,
+              { status: "cancelled", label: `Cancelled by the seller — ${why}`, timestamp: nowLabel() },
+            ],
+          })),
+        }));
+        refundIfPaid(order, group, "seller_cancelled", `Cancelled by the seller: ${why}`);
         return "ok";
       },
 

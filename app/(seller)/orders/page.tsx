@@ -11,6 +11,8 @@ import { deliveryNeedsSeller } from "@/lib/mock-data/deliveries";
 import { slotLabel } from "@/lib/mock-data/deliverySlots";
 import { requestDeliveryForGroup } from "@/lib/delivery/dispatch";
 import { CashToConfirm } from "@/components/orders/CashToConfirm";
+import { RefundsAndDisputes } from "@/components/orders/RefundsAndDisputes";
+import { SellerCancelOrder } from "@/components/orders/SellerCancelOrder";
 import { sellerTabs } from "@/lib/nav/seller-tabs";
 import { flattenGroups, groupTotal, paymentMethodLabel, type FlatOrderGroup, type OrderStatus } from "@/lib/mock-data/orders";
 
@@ -226,6 +228,7 @@ export default function OrdersPage() {
       <h1 className="px-3 md:px-5 pt-3.5 pb-2 text-[14px] font-semibold text-gl-text">Orders</h1>
 
       <CashToConfirm sellerId={currentSellerId} />
+      <RefundsAndDisputes sellerId={currentSellerId} />
 
       <div className="flex gap-1.5 px-3 md:px-5 pb-2.5 overflow-x-auto">
         {tabs.map((tab) => (
@@ -262,6 +265,7 @@ export default function OrdersPage() {
               onRequestDelivery={(id) => flashThenRun(id, requestDeliveryForGroup)}
               onMarkDelivered={(id) => flashThenRun(id, markDelivered)}
             />
+            <SellerCancelOrder group={group} actingSellerId={currentSellerId} />
           </div>
         ))
       )}

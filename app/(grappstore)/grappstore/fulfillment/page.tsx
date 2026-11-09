@@ -10,6 +10,7 @@ import { DeliveryOrderCard, CancelledOrderCard, isRiderManaged } from "@/compone
 import { deliveryNeedsSeller } from "@/lib/mock-data/deliveries";
 import { requestDeliveryForGroup } from "@/lib/delivery/dispatch";
 import { CashToConfirm } from "@/components/orders/CashToConfirm";
+import { SellerCancelOrder } from "@/components/orders/SellerCancelOrder";
 import { flattenGroups, groupTotal, type FlatOrderGroup, type OrderStatus } from "@/lib/mock-data/orders";
 
 type FilterTab = "needs_action" | "preparing" | "delivered";
@@ -228,13 +229,15 @@ export default function GrappStoreFulfillmentPage() {
         </div>
       ) : (
         filteredGroups.map((group) => (
-          <FulfillmentCard
-            key={group.id}
-            group={group}
-            justUpdated={group.id === recentlyUpdatedId}
-            onRequestDelivery={(id) => flashThenRun(id, requestDeliveryForGroup)}
-            onMarkDelivered={(id) => flashThenRun(id, markDelivered)}
-          />
+          <div key={group.id}>
+            <FulfillmentCard
+              group={group}
+              justUpdated={group.id === recentlyUpdatedId}
+              onRequestDelivery={(id) => flashThenRun(id, requestDeliveryForGroup)}
+              onMarkDelivered={(id) => flashThenRun(id, markDelivered)}
+            />
+            <SellerCancelOrder group={group} actingSellerId="grapplive-official" />
+          </div>
         ))
       )}
     </div>

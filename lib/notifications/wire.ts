@@ -6,8 +6,12 @@ import { useRiderIdentityStore } from "@/lib/store/useRiderIdentityStore";
 import { notifyBuyer, notifyRider, notifySeller, notifyStaff } from "@/lib/store/useNotificationsStore";
 import { failureReasonLabels, type Delivery, type DeliveryHistoryEntry, type DeliveryStatus } from "@/lib/mock-data/deliveries";
 import { slotLabel } from "@/lib/mock-data/deliverySlots";
-import { paymentMethodLabel, type Order, type OrderStatus } from "@/lib/mock-data/orders";
+import { paymentMethodLabel, type Order, type OrderGroup, type OrderStatus } from "@/lib/mock-data/orders";
 import { CASH_HOLD_LIMIT_GHS, type CashEntry } from "@/lib/mock-data/cash";
+import { useRefundsStore } from "@/lib/store/useRefundsStore";
+import { useDisputesStore } from "@/lib/store/useDisputesStore";
+import { disputeReasonLabels, type Dispute } from "@/lib/mock-data/disputes";
+import type { Refund } from "@/lib/mock-data/refunds";
 
 // Who gets told what, in one place. Rather than sprinkling notify() calls
 // through every action, this WATCHES the order, delivery, cash and rider stores
@@ -201,7 +205,9 @@ function onOrderPlaced(order: Order) {
   });
 }
 
-function onOrderStatusChange(order: Order, groupId: string, sellerId: string, from: OrderStatus, to: OrderStatus) {
+function onOrderStatusChange(order: Order, group: OrderGroup, from: OrderStatus, to: OrderStatus) {
+  const groupId = group.id;
+  const sellerId = group.sellerId;
   if (from === "awaiting_confirmation" && (to === "ready_to_pack" || to === "preparing")) {
     notifyBuyer(order.buyerPhone, {
       kind: "order",
@@ -211,11 +217,23 @@ function onOrderStatusChange(order: Order, groupId: string, sellerId: string, fr
     });
   }
   if (to === "cancelled") {
-    notifySeller(sellerId, {
-      kind: "order",
-      title: "Order cancelled",
-      body: "The buyer cancelled their cash-on-delivery order. There's nothing to pack.",
-    });
+    const label = group.history[group.history.length - 1]?.label ?? "";
+    if (label.startsWith("Cancelled by the seller")) {
+      notifyBuyer(order.buyerPhone, {
+        kind: "order",
+        title: "Order cancelled by the seller",
+        body: `${label.replace("Cancelled by the seller — ", "Reason: ")}.${
+          group.paymentMethod === "cash_on_delivery" ? " Nothing was charged." : " You'll be refunded."
+        }`,
+        href: orderHref(groupId),
+      });
+    } else {
+      notifySeller(sellerId, {
+        kind: "order",
+        title: "Order cancelled",
+        body: "The buyer cancelled this order. There's nothing to pack.",
+      });
+    }
   }
   // Older orders with no delivery record are marked delivered by the seller.
   if (to === "delivered" && !useDeliveryStore.getState().deliveries.some((d) => d.orderGroupId === groupId)) {
@@ -239,7 +257,7 @@ function onOrders(next: { orders: Order[]; hasHydrated: boolean }, prev: { order
     }
     for (const g of order.groups) {
       const wasGroup = was.groups.find((x) => x.id === g.id);
-      if (wasGroup && wasGroup.status !== g.status) onOrderStatusChange(order, g.id, g.sellerId, wasGroup.status, g.status);
+      if (wasGroup && wasGroup.status !== g.status) onOrderStatusChange(order, g, wasGroup.status, g.status);
     }
   }
 }
@@ -293,6 +311,98 @@ function onCash(next: { entries: CashEntry[]; hasHydrated: boolean }, prev: { en
   }
 }
 
+// ---- refunds and disputes ----
+
+function orderLinkFor(groupId: string) {
+  return orderHref(groupId);
+}
+
+function onRefund(r: Refund, was: Refund | undefined) {
+  const amount = ghs(r.amountGHS);
+  const who = r.owner === "seller" ? r.sellerName : "GRAPPlive";
+  if (!was) {
+    notifyBuyer(r.buyerPhone, {
+      kind: "order",
+      title: "Refund on the way",
+      body: `${amount} will be refunded to you by ${who}. ${r.reason}.`,
+      href: orderLinkFor(r.orderGroupId),
+    });
+    if (r.owner === "seller") {
+      notifySeller(r.sellerId, {
+        kind: "order",
+        title: "Refund to send",
+        body: `Refund ${amount} to the buyer (${r.reason}). Mark it sent once you've paid it back.`,
+      });
+    } else {
+      notifyStaff({ kind: "order", title: "Refund to process", body: `${amount} owed to a buyer (${r.reason}).` });
+    }
+    return;
+  }
+  if (was.status === "pending" && r.status === "paid") {
+    notifyBuyer(r.buyerPhone, {
+      kind: "order",
+      title: "Refund sent",
+      body: `${amount} has been refunded to you by ${r.paidBy === "staff" ? "GRAPPlive" : who}.`,
+      href: orderLinkFor(r.orderGroupId),
+    });
+  }
+}
+
+function onRefunds(next: { refunds: Refund[]; hasHydrated: boolean }, prev: { refunds: Refund[]; hasHydrated: boolean }) {
+  if (!prev.hasHydrated || !next.hasHydrated || next.refunds === prev.refunds) return;
+  const before = new Map(prev.refunds.map((r) => [r.id, r]));
+  for (const r of next.refunds) onRefund(r, before.get(r.id));
+}
+
+function onDispute(d: Dispute, was: Dispute | undefined) {
+  const href = orderLinkFor(d.orderGroupId);
+  const reason = disputeReasonLabels[d.reason];
+  if (!was) {
+    notifySeller(d.sellerId, {
+      kind: "order",
+      title: "A buyer reported a problem",
+      body: `${reason}${d.details ? `: ${d.details}` : ""}. You can respond on your Orders page.`,
+    });
+    notifyStaff({ kind: "order", title: "New dispute", body: `${d.sellerName}: ${reason}${d.details ? ` — ${d.details}` : ""}` });
+    return;
+  }
+  if (!was.sellerResponse && d.sellerResponse) {
+    notifyStaff({ kind: "order", title: "Seller responded to a dispute", body: `${d.sellerName}: ${d.sellerResponse.text}` });
+  }
+  if (was.status === "open" && d.status === "refunded") {
+    const amount = ghs(d.resolution?.amountGHS ?? 0);
+    notifyBuyer(d.buyerPhone, {
+      kind: "order",
+      title: "Your report was upheld",
+      body: `GRAPPlive decided in your favour: ${amount} will be refunded.${d.resolution?.note ? ` ${d.resolution.note}` : ""}`,
+      href,
+    });
+    notifySeller(d.sellerId, {
+      kind: "order",
+      title: "Dispute resolved: refund",
+      body: `Support refunded the buyer ${amount} (${reason}).${d.resolution?.note ? ` ${d.resolution.note}` : ""}`,
+    });
+  } else if (was.status === "open" && d.status === "rejected") {
+    notifyBuyer(d.buyerPhone, {
+      kind: "order",
+      title: "Your report was reviewed",
+      body: `GRAPPlive decided not to refund this order.${d.resolution?.note ? ` ${d.resolution.note}` : ""}`,
+      href,
+    });
+    notifySeller(d.sellerId, {
+      kind: "order",
+      title: "Dispute resolved: no refund",
+      body: `Support rejected the buyer's report (${reason}).${d.resolution?.note ? ` ${d.resolution.note}` : ""}`,
+    });
+  }
+}
+
+function onDisputes(next: { disputes: Dispute[]; hasHydrated: boolean }, prev: { disputes: Dispute[]; hasHydrated: boolean }) {
+  if (!prev.hasHydrated || !next.hasHydrated || next.disputes === prev.disputes) return;
+  const before = new Map(prev.disputes.map((d) => [d.id, d]));
+  for (const d of next.disputes) onDispute(d, before.get(d.id));
+}
+
 // ---- riders ----
 
 function onRiders(
@@ -320,6 +430,8 @@ export function startNotificationWiring(): () => void {
     useOrdersStore.subscribe(onOrders),
     useCashLedgerStore.subscribe(onCash),
     useRiderStore.subscribe(onRiders),
+    useRefundsStore.subscribe(onRefunds),
+    useDisputesStore.subscribe(onDisputes),
   ];
   return () => stops.forEach((stop) => stop());
 }

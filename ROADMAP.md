@@ -752,6 +752,50 @@ bursts; deleting a notification.
 
 ---
 
+## 14. Cancelling, refunds and buyer disputes
+
+Closes the biggest hole in the money flow. **No real money moves** — there is no
+payment rail yet — so a refund is a RECORD of money owed to a buyer that its
+owner marks as sent.
+- **Cancelling.** The buyer can cancel any order until a rider is requested
+  (`awaiting_confirmation`, `ready_to_pack`, `preparing`): `cancelByBuyer`. The
+  seller can too, with a reason (out of stock / can't deliver there / buyer
+  asked / other): `cancelBySeller`, a *Cancel this order* control under each
+  seller order (GrappStore staff: on the fulfillment page; GrappStore orders
+  can only be cancelled by staff). If a delivery is open, cancel that first.
+- **Refunds** (`useRefundsStore`, `lib/mock-data/refunds.ts`). A cancelled order
+  that was paid (anything but cash on delivery) creates a refund of everything
+  the buyer paid (`groupPayable`: items + any delivery fee they were charged;
+  the Instant Confirm service charge isn't refunded — it isn't on the order).
+  **Who owes it follows who holds the money:** Direct MoMo -> the seller (the
+  buyer paid them directly: *REFUND TO SEND* card on their Orders page, *I've
+  sent the refund*); Instant Confirm and GrappStore -> GRAPPlive (the Disputes
+  tab: *Mark as refunded*). Support can mark any refund sent (with a note), e.g.
+  once a seller confirms. One refund per cancelled order / per dispute.
+- **Buyer disputes** (`useDisputesStore`, `lib/mock-data/disputes.ts`). After
+  delivery the buyer can *Report a problem* — not as described, wrong item,
+  damaged, never arrived — with an optional note, once per order and within
+  `DISPUTE_WINDOW_DAYS` (3) of the rider completing the delivery. The seller
+  can respond once; **GRAPPlive staff decide**: refund (the full amount, or
+  less — never more than the buyer paid) or reject, with a note both sides see.
+  A refund decision creates a refund owed by the same rule as above. Staff see
+  the evidence on the card: who delivered it and when, **using the customer's
+  delivery code** (the strongest answer to "never arrived").
+- **Screens.** Buyer order page: cancel (says who refunds and how much), refund
+  status cards, *Report a problem*, dispute status with the outcome. Seller
+  Orders: cancel, refunds to send, disputes to respond to. Staff Ops: new
+  **Disputes** tab (disputes + refunds; late seller refunds and undecided
+  disputes are flagged — `refundAttention`, `disputeAttention`).
+- **Notifications** (all through the watcher in `lib/notifications/wire.ts`):
+  cancellations (to the other side, with the reason), refund created / sent,
+  dispute opened / answered / decided.
+*Not built:* real refunds (needs the payments backend), photo or other evidence
+from the buyer, returning the item, a buyer escalating a seller's silence, the
+seller disputing support's decision, partial cancellation within an order,
+refunding a delivery fee for a rider-side failure, and chargebacks.
+
+---
+
 ## 10. Test coverage
 
 ### 10.1 ✅ Resolved — zero automated tests existed until this pass
@@ -780,6 +824,10 @@ lower return at this stage:
 - `lib/store/useStoreProfileStore.test.ts` (added later, 8 tests) — the
   per-seller storefront profile: seeding, isolation between sellers, and
   the migration from the old single-seller shape.
+- `lib/store/useRefundsAndDisputes.test.ts` (21 tests) — cancelling (buyer and
+  seller), refunds and who owes them, and the dispute lifecycle.
+- `lib/notifications/refundNotifications.test.ts` (13 tests) — who is told about
+  cancellations, refunds and disputes, and the support attention rules.
 - `lib/notifications/wire.test.ts` (22 tests) — the inbox (separate per
   person, read marking, the cap) and the watcher: who is told at each step of an
   order, a delivery, a scheduled job, a failure, support actions and cash.

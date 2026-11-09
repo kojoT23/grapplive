@@ -1,5 +1,7 @@
 import type { Delivery, DeliveryActor, DeliveryStatus } from "@/lib/mock-data/deliveries";
 import type { CashEntry } from "@/lib/mock-data/cash";
+import type { Refund } from "@/lib/mock-data/refunds";
+import { disputeReasonLabels, type Dispute } from "@/lib/mock-data/disputes";
 import { ACTIVE_DELIVERY_STATUSES } from "@/lib/mock-data/deliveries";
 import { toDateKey } from "@/lib/mock-data/deliverySlots";
 
@@ -15,6 +17,8 @@ export const ATTENTION = {
   returnStallMinutes: 120, // a rider still hasn't brought a failed parcel back
   returnConfirmHours: 24, // the seller hasn't confirmed a returned parcel
   handoverConfirmHours: 48, // the seller hasn't answered a cash handover
+  sellerRefundHours: 48, // a seller hasn't sent a refund they owe
+  disputeOpenHours: 24, // a buyer's dispute nobody has decided
 };
 
 const MIN = 60_000;
@@ -146,4 +150,25 @@ export function opsSummary(deliveries: Delivery[], entries: CashEntry[], nowMs: 
       .filter((e) => e.status === "rider_liable")
       .reduce((sum, e) => sum + e.amountGHS, 0),
   };
+}
+
+// Refunds and disputes that need support. A refund GRAPPlive owes is always
+// support's to do; one a seller owes becomes support's concern once it's late.
+export function refundAttention(r: Refund, nowMs: number): string[] {
+  if (nowMs <= 0 || r.status !== "pending") return [];
+  const amount = `GHS ${r.amountGHS.toLocaleString("en-GH")}`;
+  if (r.owner === "staff") return [`GRAPPlive owes the buyer a refund of ${amount}`];
+  const waited = nowMs - r.createdAt;
+  if (waited >= ATTENTION.sellerRefundHours * HOUR) {
+    return [`${r.sellerName} hasn't sent the ${amount} refund in ${Math.floor(waited / HOUR)} h`];
+  }
+  return [];
+}
+
+export function disputeAttention(d: Dispute, nowMs: number): string[] {
+  if (nowMs <= 0 || d.status !== "open") return [];
+  const reasons = [`Buyer reported: ${disputeReasonLabels[d.reason]}`];
+  const waited = nowMs - d.createdAt;
+  if (waited >= ATTENTION.disputeOpenHours * HOUR) reasons.push(`Undecided for ${Math.floor(waited / HOUR)} h`);
+  return reasons;
 }

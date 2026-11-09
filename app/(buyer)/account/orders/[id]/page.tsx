@@ -17,6 +17,14 @@ import {
 } from "@/lib/mock-data/deliveries";
 import { useNow } from "@/lib/hooks/useNow";
 import { slotLabel } from "@/lib/mock-data/deliverySlots";
+import { useRefundsStore, refundsForGroup } from "@/lib/store/useRefundsStore";
+import { useDisputesStore, disputeForGroup } from "@/lib/store/useDisputesStore";
+import {
+  disputeReasonLabels,
+  DISPUTE_WINDOW_DAYS,
+  type Dispute,
+  type DisputeReason,
+} from "@/lib/mock-data/disputes";
 import { useAppStore } from "@/lib/store/useAppStore";
 
 const ALL_STEPS: { status: OrderStatus; fallbackLabel: string }[] = [
@@ -98,10 +106,111 @@ function RateRider({ delivery }: { delivery: Delivery }) {
   );
 }
 
-// A buyer can call off a cash-on-delivery order until a rider has been
+// After delivery the buyer can report a problem (not as described, wrong item,
+// damaged, never arrived) within DISPUTE_WINDOW_DAYS. The seller can respond and
+// GRAPPlive decides.
+function ReportProblem({ groupId }: { groupId: string }) {
+  const phone = useAppStore((s) => s.phone);
+  const openDispute = useDisputesStore((s) => s.openDispute);
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState<DisputeReason | null>(null);
+  const [details, setDetails] = useState("");
+  const [error, setError] = useState("");
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="w-full text-gl-text-secondary text-[11px] font-semibold py-2 mb-4 active:opacity-60"
+      >
+        Something wrong? Report a problem
+      </button>
+    );
+  }
+
+  const handleSubmit = () => {
+    if (!reason) return;
+    const result = openDispute({ orderGroupId: groupId, buyerPhone: phone, reason, details });
+    if (result === "window_closed") setError(`Problems can only be reported within ${DISPUTE_WINDOW_DAYS} days of delivery.`);
+    else if (result === "not_buyer") setError("Only the person who placed this order can report a problem.");
+    else if (result !== "ok") setError("Couldn't send your report. Please try again.");
+  };
+
+  return (
+    <div className="border border-gl-border rounded-lg p-3 mb-4">
+      <div className="text-[11px] font-semibold text-gl-text mb-1.5">What went wrong?</div>
+      <div className="flex flex-wrap gap-1.5 mb-2">
+        {(Object.keys(disputeReasonLabels) as DisputeReason[]).map((r) => (
+          <button
+            key={r}
+            onClick={() => setReason(r)}
+            className={`border rounded-full px-2.5 py-1 text-[10px] font-semibold ${
+              reason === r ? "border-gl-brand text-gl-brand border-[1.5px]" : "border-gl-border text-gl-text-secondary"
+            }`}
+          >
+            {disputeReasonLabels[r]}
+          </button>
+        ))}
+      </div>
+      <input
+        type="text"
+        value={details}
+        onChange={(e) => setDetails(e.target.value)}
+        maxLength={500}
+        placeholder="Tell us what happened (optional)"
+        className="w-full border border-gl-border-strong rounded-lg px-3 py-2 text-[12px] text-gl-text outline-none mb-2 transition-colors focus:border-gl-brand"
+      />
+      {error && <p className="text-[10px] text-gl-red mb-1.5">{error}</p>}
+      <div className="flex gap-2">
+        <button
+          onClick={handleSubmit}
+          disabled={!reason}
+          className="flex-1 bg-gl-brand text-white rounded-lg py-2 text-[12px] font-semibold active:opacity-90 transition-opacity disabled:opacity-40"
+        >
+          Send report
+        </button>
+        <button
+          onClick={() => setOpen(false)}
+          className="flex-1 border border-gl-border-strong text-gl-text rounded-lg py-2 text-[12px] font-semibold active:bg-gl-bg-muted"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function DisputeStatus({ dispute }: { dispute: Dispute }) {
+  const outcome =
+    dispute.status === "open"
+      ? "GRAPPlive is looking into it."
+      : dispute.status === "refunded"
+        ? `Decided in your favour: GHS ${(dispute.resolution?.amountGHS ?? 0).toLocaleString("en-GH")} will be refunded.`
+        : "GRAPPlive decided not to refund this order.";
+  return (
+    <div className="border border-gl-border rounded-lg p-3 mb-4">
+      <div className="text-[10px] font-semibold text-gl-text mb-0.5">
+        YOUR REPORT · {disputeReasonLabels[dispute.reason].toUpperCase()}
+      </div>
+      <div className={`text-[11px] font-semibold ${dispute.status === "open" ? "text-gl-amber" : "text-gl-text"}`}>
+        {outcome}
+      </div>
+      {dispute.resolution?.note && (
+        <div className="text-[10px] text-gl-text-secondary mt-0.5">{dispute.resolution.note}</div>
+      )}
+      {dispute.sellerResponse && (
+        <div className="text-[10px] text-gl-text-secondary mt-1">
+          {dispute.sellerName} replied: {dispute.sellerResponse.text}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// A buyer can call off an order until a rider has been
 // requested (nothing has been paid, so nothing needs refunding). Two taps, so
 // it can't happen by accident.
-function CancelOrder({ groupId }: { groupId: string }) {
+function CancelOrder({ groupId, refundNote }: { groupId: string; refundNote: string }) {
   const phone = useAppStore((s) => s.phone);
   const cancelByBuyer = useOrdersStore((s) => s.cancelByBuyer);
   const [confirming, setConfirming] = useState(false);
@@ -125,6 +234,7 @@ function CancelOrder({ groupId }: { groupId: string }) {
       >
         {confirming ? "Tap again to cancel this order" : "Cancel order"}
       </button>
+      <p className="text-[9px] text-gl-text-secondary mt-1">{refundNote}</p>
       {error && <p className="text-[10px] text-gl-red mt-1">{error}</p>}
     </div>
   );
@@ -138,6 +248,8 @@ export default function BuyerOrderDetailPage() {
     latestDeliveryForGroup(s.deliveries, params.id)
   );
   const now = useNow();
+  const refunds = useRefundsStore((s) => s.refunds);
+  const disputes = useDisputesStore((s) => s.disputes);
 
   if (!group) {
     return (
@@ -172,9 +284,19 @@ export default function BuyerOrderDetailPage() {
     delivery !== undefined &&
     ACTIVE_DELIVERY_STATUSES.includes(delivery.status) &&
     delivery.status !== "returning";
+  // Any order can be called off until a rider is requested; a paid one is refunded.
   const canCancel =
-    group.paymentMethod === "cash_on_delivery" &&
-    (group.status === "ready_to_pack" || group.status === "preparing");
+    group.status === "awaiting_confirmation" ||
+    group.status === "ready_to_pack" ||
+    group.status === "preparing";
+  const paidOrder = group.paymentMethod !== "cash_on_delivery";
+  const refundNote = paidOrder
+    ? `You'll be refunded GHS ${groupPayable(group).toLocaleString("en-GH")} by ${
+        group.paymentMethod === "direct_momo" ? group.sellerName : "GRAPPlive"
+      }.`
+    : "You haven't paid yet, so nothing will be charged.";
+  const groupRefunds = refundsForGroup(refunds, group.id);
+  const dispute = disputeForGroup(disputes, group.id);
 
   const timeline = relevantSteps.map((step) => {
     const historyEntry = group.history.find((h) => h.status === step.status);
@@ -304,7 +426,24 @@ export default function BuyerOrderDetailPage() {
           </div>
         )}
 
+        {groupRefunds.map((r) => (
+          <div key={r.id} className="border border-gl-border rounded-lg p-3 mb-4">
+            <div className="text-[10px] font-semibold text-gl-text mb-0.5">
+              REFUND · GHS {r.amountGHS.toLocaleString("en-GH")}
+            </div>
+            <div className={`text-[11px] ${r.status === "paid" ? "text-gl-green" : "text-gl-amber"} font-semibold`}>
+              {r.status === "paid"
+                ? `Sent by ${r.paidBy === "staff" ? "GRAPPlive" : r.sellerName}`
+                : `Waiting for ${r.owner === "seller" ? r.sellerName : "GRAPPlive"} to send it`}
+            </div>
+            <div className="text-[10px] text-gl-text-secondary mt-0.5">{r.reason}</div>
+          </div>
+        ))}
+
         {delivery?.status === "delivered" && delivery.riderName && <RateRider delivery={delivery} />}
+
+        {group.status === "delivered" && !dispute && <ReportProblem groupId={group.id} />}
+        {dispute && <DisputeStatus dispute={dispute} />}
 
         {delivery?.status === "returning" && delivery.failureReason && (
           <div className="border border-gl-border rounded-lg p-3 mb-4">
@@ -333,7 +472,7 @@ export default function BuyerOrderDetailPage() {
           </div>
         )}
 
-        {canCancel && <CancelOrder groupId={group.id} />}
+        {canCancel && <CancelOrder groupId={group.id} refundNote={refundNote} />}
 
         <h2 className="text-[11px] font-semibold text-gl-text mb-2.5">Tracking</h2>
         <div>
